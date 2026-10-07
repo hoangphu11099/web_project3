@@ -14,7 +14,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--font-ui, Tahoma), Arial, sans-serif;
 }
 .app-shell {
   min-height: 100vh;
@@ -2262,7 +2262,7 @@ body {
   letter-spacing: 0.8px;
 }
 .qr-code-card strong {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-ui, Tahoma), Arial, sans-serif;
   font-size: 13px;
   word-break: break-all;
 }
@@ -2824,7 +2824,7 @@ button:disabled {
   min-height: 100vh;
   background: #fff;
   color: #13213d;
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-ui, Tahoma), Arial, sans-serif;
 }
 .public-container {
   width: min(1180px, calc(100% - 48px));

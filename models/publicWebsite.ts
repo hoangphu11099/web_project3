@@ -35,7 +35,7 @@ export const defaultSiteSettings: SiteSettings = {
   introduction:
     "Trang thông tin PP Academy cung cấp thông báo, giới thiệu chương trình đào tạo và các tiện ích học tập cho sinh viên, giảng viên.",
   heroImageUrl: "/pp-academy-campus.webp",
-  logoUrl: "/pp-academy-logo.svg",
+  logoUrl: "/pp-academy-logo.png",
   downloadButtonLabel: "Tải ứng dụng",
   downloadUrl: "",
   downloadEnabled: false,
@@ -48,6 +48,7 @@ export const defaultSiteSettings: SiteSettings = {
 // Replace only the original demo copy; preserve text edited by the school.
 export function normalizeSiteSettings(value: Partial<SiteSettings>): SiteSettings {
  const settings = { ...defaultSiteSettings, ...value };
+ if (!settings.logoUrl || settings.logoUrl === "/pp-academy-logo.svg") settings.logoUrl = defaultSiteSettings.logoUrl;
  if (settings.introduction === "PP Academy là môi trường học tập hiện đại, nơi người học phát triển kiến thức chuyên môn, kỹ năng thực tiễn và tư duy sáng tạo để sẵn sàng cho tương lai.") settings.introduction = defaultSiteSettings.introduction;
  if (settings.slogan === "Kiến tạo tri thức · Dẫn lối tương lai") settings.slogan = defaultSiteSettings.slogan;
  return settings;

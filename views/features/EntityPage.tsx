@@ -21,7 +21,18 @@ function majorCodeOf(classCode: string) {
   return classCode.split("_")[1]?.toUpperCase() || "";
 }
 
+const teachingSessions: Record<string, { startTime: string; endTime: string }> = {
+  "Sáng": { startTime: "07:30", endTime: "11:30" },
+  "Chiều": { startTime: "13:30", endTime: "16:30" },
+  "Tối": { startTime: "18:00", endTime: "21:00" },
+};
+function schoolToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  return ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("-");
+}
+
 type ScheduleDraft = {
+  customTime: boolean;
   semesterId: string;
   courseId: string;
   teacherId: string;
@@ -40,9 +51,10 @@ const emptyScheduleDraft: ScheduleDraft = {
   roomId: "",
   teachingDate: "",
   teachingDates: [],
-  session: "",
-  startTime: "",
-  endTime: "",
+  session: "Sáng",
+  startTime: "07:30",
+  endTime: "11:30",
+  customTime: false,
 };
 
 function dayOfWeekFromDate(value: string) {
@@ -125,6 +137,8 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
     const next: Record<string, string> = {};
     for (const field of config.fields || []) {
       let value = keyOf(row, field.key);
+      if ((isStudentPage || active === "Giảng viên") && ["username", "fullName", "email"].includes(field.key)) value = pick(row, `User.${field.key}`);
+      if (field.key === "password") value = "";
       if (field.key.endsWith("Id")) value = keyOf(row, field.key) ?? keyOf(row, field.key.replace(/Id$/, "ID"));
       if (field.type === "date") value = inputDate(value); if (field.type === "datetime-local") value = inputDate(value, true);
       next[field.key] = value == null ? "" : String(value);
@@ -143,7 +157,7 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
   };
 
   const submit = async (event: React.FormEvent) => { event.preventDefault(); if (hasCourseField && !formMetadata.courses.some(course => String(idOf(course)) === form.courseId)) { setError("Vui lòng chọn môn học thuộc ngành của lớp."); return; } setSaving(true); setError(""); try { const id = editing ? idOf(editing) : 0; const method = editing ? "PUT" : "POST"; const path = editing ? `${config.endpoint}/${id}` : config.endpoint; const payload = await apiRequest(token, path, { method, body: JSON.stringify(buildBody()) }); onToast(payload.message || "Đã lưu thành công"); setForm({}); setEditing(null); setFormOpen(false); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Không thể lưu dữ liệu"); } finally { setSaving(false); } };
-  const remove = async (row: Row) => { if (!confirm("Bạn chắc chắn muốn xóa mục này?")) return; try { const payload = await apiRequest(token, `${config.endpoint}/${idOf(row)}`, { method: "DELETE" }); onToast(payload.message || "Đã xóa"); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Không thể xóa"); } };
+  const remove = async (row: Row) => { if (!confirm(isStudentPage ? `Xóa sinh viên ${display(keyOf(row, "StudentCode"))} và tài khoản đăng nhập?` : "Bạn chắc chắn muốn xóa mục này?")) return; try { const payload = await apiRequest(token, `${config.endpoint}/${idOf(row)}`, { method: "DELETE" }); onToast(payload.message || "Đã xóa"); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Không thể xóa"); } };
 
   const openStudents = async (row: Row) => {
     setClassAction({ row, kind: "students" }); setStudentIds([]); setError("");
@@ -171,6 +185,7 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
           return;
         }
         const teachingDates = Array.from(new Set([...scheduleDraft.teachingDates, scheduleDraft.teachingDate].filter(Boolean))).sort();
+        if (teachingDates.some(date => date < schoolToday())) { setError("Không được chọn ngày dạy trong quá khứ."); return; }
         const semesterStart = String(keyOf(selectedSemester, "StartDate") || "").slice(0, 10);
         const semesterEnd = String(keyOf(selectedSemester, "EndDate") || "").slice(0, 10);
         if (teachingDates.some(date => (semesterStart && date < semesterStart) || (semesterEnd && date > semesterEnd))) {
@@ -218,7 +233,7 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
 
 
   return <section className="feature-page"><div className="feature-heading"><div><p className="eyebrow">Quản lý đào tạo</p><h1>{config.title}</h1><p>{config.desc}</p></div><div className="form-actions">{config.canImport && <FileImport token={token} kind={active === "Sinh viên" ? "students" : "teachers"} onToast={onToast} onDone={load} />}{config.fields && <button className="primary-button" onClick={() => { setEditing(null); setForm({}); setFormOpen(!formOpen); }}><Icon name={formOpen ? "close" : "plus"} size={16} />{formOpen ? "Đóng form" : config.createLabel}</button>}</div></div>
-    {formOpen && config.fields && <form className="feature-form" onSubmit={submit}><header className="form-section-heading"><h2>{editing ? "Chỉnh sửa thông tin" : config.createLabel}</h2><p>Các trường có dấu <span className="field-required">*</span> là bắt buộc.</p></header><div className="form-grid">{config.fields.map((field) => <FormField key={field.key} field={field} value={form[field.key] || ""} metadata={formMetadata} disabled={field.optionKey === "courses" && !form.classId} onChange={(value) => changeFormField(field.key, value)} />)}</div>{hasCourseField && <p className="filter-summary">{!form.classId ? "Chọn lớp trước để xem môn học thuộc ngành của lớp." : formMetadata.courses.length === 0 ? "Lớp chưa có ngành hoặc ngành chưa có môn học. Vui lòng kiểm tra thông tin lớp và môn học." : "Danh sách môn học chỉ gồm các môn thuộc ngành của lớp đã chọn."}</p>}<div className="form-actions"><button className="primary-button" disabled={saving}>{saving ? "Đang lưu..." : editing ? "Cập nhật" : "Lưu dữ liệu"}</button>{editing && <button type="button" className="refresh-button" onClick={() => { setEditing(null); setForm({}); }}>Hủy sửa</button>}</div></form>}
+    {formOpen && config.fields && <form className="feature-form" onSubmit={submit}><header className="form-section-heading"><h2>{editing ? "Chỉnh sửa thông tin" : config.createLabel}</h2><p>Các trường có dấu <span className="field-required">*</span> là bắt buộc.</p></header><div className="form-grid">{config.fields.map((field) => <FormField key={field.key} field={editing && field.key === "password" ? { ...field, placeholder: "Để trống để giữ mật khẩu hiện tại" } : field} value={form[field.key] || ""} metadata={formMetadata} disabled={field.optionKey === "courses" && !form.classId} onChange={(value) => changeFormField(field.key, value)} />)}</div>{hasCourseField && <p className="filter-summary">{!form.classId ? "Chọn lớp trước để xem môn học thuộc ngành của lớp." : formMetadata.courses.length === 0 ? "Lớp chưa có ngành hoặc ngành chưa có môn học. Vui lòng kiểm tra thông tin lớp và môn học." : "Danh sách môn học chỉ gồm các môn thuộc ngành của lớp đã chọn."}</p>}<div className="form-actions"><button className="primary-button" disabled={saving}>{saving ? "Đang lưu..." : editing ? "Cập nhật" : "Lưu dữ liệu"}</button>{editing && <button type="button" className="refresh-button" onClick={() => { setEditing(null); setForm({}); }}>Hủy sửa</button>}</div></form>}
     {classAction?.kind === "schedule" && <div className="schedule-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) { setClassAction(null); setScheduleDraft(emptyScheduleDraft); setError(""); } }}>
       <form className="schedule-modal" onSubmit={submitClassAction}>
         <header className="schedule-modal-header">
@@ -238,7 +253,7 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
           <section>
             <h3><span>1</span> Thông tin giảng dạy</h3>
             <div className="schedule-form-grid">
-              <label className="schedule-field schedule-field-wide"><span>Học kỳ *</span><select required value={scheduleDraft.semesterId} onChange={e => setScheduleDraft({ ...scheduleDraft, semesterId: e.target.value, teachingDate: "", teachingDates: [] })}><option value="">Chọn học kỳ</option>{metadata.semesters.filter(row => keyOf(row,"Status") !== "closed").map(row => <option key={idOf(row)} value={idOf(row)}>{display(keyOf(row,"Name"))} · {String(keyOf(row,"StartDate")).slice(0,10)} → {String(keyOf(row,"EndDate")).slice(0,10)}</option>)}</select><small>Nếu hôm nay ngoài khoảng này, hãy tạo/chọn học kỳ mới tại mục Học kỳ.</small></label>
+              <label className="schedule-field schedule-field-wide"><span>Học kỳ *</span><select required value={scheduleDraft.semesterId} onChange={e => setScheduleDraft({ ...scheduleDraft, semesterId: e.target.value, teachingDate: "", teachingDates: [] })}><option value="">Chọn học kỳ</option>{metadata.semesters.filter(row => keyOf(row,"Status") !== "closed").map(row => <option key={idOf(row)} value={idOf(row)}>{display(keyOf(row,"Name"))} · {String(keyOf(row,"StartDate")).slice(0,10)} → {String(keyOf(row,"EndDate")).slice(0,10)}</option>)}</select><small>Chọn học kỳ bao gồm ngày dạy. Nếu ngày dạy nằm ngoài học kỳ, hệ thống sẽ báo rõ khi lưu.</small></label>
               <label className="schedule-field schedule-field-wide"><span>Môn học <b>*</b></span><select required value={scheduleDraft.courseId} onChange={(e) => setScheduleDraft({ ...scheduleDraft, courseId: e.target.value })}><option value="">-- Chọn môn học --</option>{selectedClassCourses.map((row) => <option key={idOf(row)} value={idOf(row)}>{display(keyOf(row, "Code"))} · {display(keyOf(row, "Name"))}</option>)}</select>{selectedClassCourses.length === 0 && <small className="field-warning">Không có môn thuộc chuyên ngành của lớp. Hãy tạo môn ở mục Môn học.</small>}</label>
               <label className="schedule-field"><span>Giảng viên dạy môn *</span><select required value={scheduleDraft.teacherId} onChange={e => setScheduleDraft({ ...scheduleDraft, teacherId: e.target.value })}><option value="">Chọn giảng viên</option>{metadata.teachers.map((row) => <option key={idOf(row)} value={idOf(row)}>{display(keyOf(row, "TeacherCode"))} · {display(pick(row, "User.FullName"))}</option>)}</select></label>
               <label className="schedule-field"><span>Phòng học <b>*</b></span><select required value={scheduleDraft.roomId} onChange={(e) => setScheduleDraft({ ...scheduleDraft, roomId: e.target.value })}><option value="">-- Chọn phòng --</option>{metadata.rooms.map((row) => <option key={idOf(row)} value={idOf(row)}>{display(keyOf(row, "Name"))}{keyOf(row, "Building") ? ` · ${display(keyOf(row, "Building"))}` : ""}</option>)}</select></label>
@@ -250,16 +265,17 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
             {scheduleLookupError && <p className="field-warning">{scheduleLookupError}</p>}
             {savedSchedules.length > 0 && <div className="schedule-repeat-note"><div><strong>Lịch đã lưu của học phần</strong>{savedSchedules.map(row => {
               const date = String(keyOf(row,"FullDate") || "").slice(0,10);
-              return <p key={idOf(row)}>{date || `Hằng tuần: ${String(keyOf(row,"DayOfWeek"))}`} · {String(keyOf(row,"StartTime"))}–{String(keyOf(row,"EndTime"))} {date && <button type="button" className="refresh-button" onClick={() => setScheduleDraft({...scheduleDraft, teachingDate: date, teachingDates: [], startTime: String(keyOf(row,"StartTime")).slice(0,5), endTime: String(keyOf(row,"EndTime")).slice(0,5), session: String(keyOf(row,"Session") || "")})}>Sửa ngày này</button>}</p>;
+              return <p key={idOf(row)}>{date || `Hằng tuần: ${String(keyOf(row,"DayOfWeek"))}`} · {String(keyOf(row,"StartTime"))}–{String(keyOf(row,"EndTime"))} {date && <button type="button" className="refresh-button" disabled={date < schoolToday()} onClick={() => setScheduleDraft({...scheduleDraft, customTime: false, teachingDate: date, teachingDates: [], startTime: String(keyOf(row,"StartTime")).slice(0,5), endTime: String(keyOf(row,"EndTime")).slice(0,5), session: String(keyOf(row,"Session") || "")})}>Sửa ngày này</button>}</p>;
             })}</div></div>}
             <div className="schedule-form-grid schedule-time-grid">
-              <label className="schedule-field"><span>Ngày dạy <b>*</b></span><input type="date" disabled={!scheduleDraft.semesterId} required={!scheduleDraft.teachingDates.length} min={String(keyOf(selectedSemester, "StartDate") || "").slice(0, 10)} max={String(keyOf(selectedSemester, "EndDate") || "").slice(0, 10)} value={scheduleDraft.teachingDate} onChange={(e) => setScheduleDraft({ ...scheduleDraft, teachingDate: e.target.value })} />{scheduleDraft.teachingDate && <small>{vietnameseDayFromDate(scheduleDraft.teachingDate)} · chỉ dạy vào ngày đã chọn</small>}</label>
-              <label className="schedule-field"><span>Ca học</span><select value={scheduleDraft.session} onChange={(e) => setScheduleDraft({ ...scheduleDraft, session: e.target.value })}><option value="">Tự xác định theo giờ</option><option value="Sáng">Sáng</option><option value="Chiều">Chiều</option><option value="Tối">Tối</option></select></label>
-              <label className="schedule-field"><span>Giờ bắt đầu <b>*</b></span><input type="time" required value={scheduleDraft.startTime} onChange={(e) => setScheduleDraft({ ...scheduleDraft, startTime: e.target.value })} /></label>
-              <label className="schedule-field"><span>Giờ kết thúc <b>*</b></span><input type="time" required value={scheduleDraft.endTime} onChange={(e) => setScheduleDraft({ ...scheduleDraft, endTime: e.target.value })} /></label>
+              <label className="schedule-field"><span>Ngày dạy <b>*</b></span><input type="date" required={!scheduleDraft.teachingDates.length} min={schoolToday()} onClick={(event) => { try { event.currentTarget.showPicker?.(); } catch { /* Manual date entry remains available. */ } }} value={scheduleDraft.teachingDate} onChange={(e) => setScheduleDraft({ ...scheduleDraft, teachingDate: e.target.value })} />{scheduleDraft.teachingDate && <small>{vietnameseDayFromDate(scheduleDraft.teachingDate)} · chỉ dạy vào ngày đã chọn</small>}</label>
+              <label className="schedule-field"><span>Ca học</span><select value={scheduleDraft.session} onChange={(e) => setScheduleDraft({ ...scheduleDraft, session: e.target.value, ...teachingSessions[e.target.value], customTime: false })}><option value="Sáng">Sáng · 07:30–11:30</option><option value="Chiều">Trưa/Chiều · 13:30–16:30</option><option value="Tối">Tối · 18:00–21:00</option></select></label>
+              <label className="schedule-field"><span>Giờ bắt đầu <b>*</b></span><input type="time" required readOnly={!scheduleDraft.customTime} value={scheduleDraft.startTime} onChange={(e) => setScheduleDraft({ ...scheduleDraft, startTime: e.target.value })} /></label>
+              <label className="schedule-field"><span>Giờ kết thúc <b>*</b></span><input type="time" required readOnly={!scheduleDraft.customTime} value={scheduleDraft.endTime} onChange={(e) => setScheduleDraft({ ...scheduleDraft, endTime: e.target.value })} /></label>
             </div>
+            <button type="button" className="refresh-button" aria-pressed={scheduleDraft.customTime} onClick={() => setScheduleDraft(draft => ({ ...draft, customTime: !draft.customTime, ...(!draft.customTime ? {} : teachingSessions[draft.session] || teachingSessions["Sáng"]) }))}>{scheduleDraft.customTime ? "Dùng giờ cố định" : "Tùy chỉnh thời gian"}</button>
             <div className="schedule-repeat-note"><Icon name="refresh" size={16} /><div><strong>Chọn nhiều ngày dạy</strong><p>Các ngày dùng chung ca và giờ học. Có thể chọn hôm nay trong học kỳ. Lưu lại cùng ngày sẽ cập nhật giờ; các ngày khác đã lưu được giữ lại.</p>
-<button type="button" className="refresh-button" disabled={!scheduleDraft.teachingDate} onClick={() => setScheduleDraft({ ...scheduleDraft, teachingDates: Array.from(new Set([...scheduleDraft.teachingDates, scheduleDraft.teachingDate])).sort(), teachingDate: "" })}>Thêm ngày</button>
+<button type="button" className="refresh-button" disabled={!scheduleDraft.teachingDate || scheduleDraft.teachingDate < schoolToday()} onClick={() => setScheduleDraft({ ...scheduleDraft, teachingDates: Array.from(new Set([...scheduleDraft.teachingDates, scheduleDraft.teachingDate])).sort(), teachingDate: "" })}>Thêm ngày</button>
 {scheduleDraft.teachingDates.map(date => <div key={date}>{date} · {vietnameseDayFromDate(date)} <button type="button" onClick={() => setScheduleDraft({ ...scheduleDraft, teachingDates: scheduleDraft.teachingDates.filter(value => value !== date) })}>Bỏ ngày</button></div>)}</div></div>
           </section>
         </div>

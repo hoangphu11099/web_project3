@@ -11,8 +11,8 @@ export const metadata: Metadata = {
     "codex-preview": "development",
   },
   icons: {
-    icon: "/pp-academy-logo.svg",
-    shortcut: "/pp-academy-logo.svg",
+    icon: "/pp-academy-logo.png",
+    shortcut: "/pp-academy-logo.png",
   },
 };
 

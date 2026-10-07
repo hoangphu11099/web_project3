@@ -9,6 +9,7 @@ import {
   type SiteSettings,
 } from "@/models/publicWebsite";
 import { samplePosts, shufflePosts } from "@/models/publicContent";
+import { HeroVideos } from "./HeroVideos";
 import { Icon } from "@/components/ui/Icon";
 
 export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
@@ -122,7 +123,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
       <section
         className="public-hero full-width-hero"
         id="trang-chu">
-        <img className="hero-backdrop" src={settings.heroImageUrl || "/pp-academy-campus.webp"} alt="" fetchPriority="high" />
+        <HeroVideos poster={settings.heroImageUrl || "/pp-academy-campus.webp"} />
         <div className="hero-shade" aria-hidden="true" />
         <div className="public-container public-hero-content">
           <p className="public-eyebrow">{settings.schoolName} / Thông tin & đào tạo</p>
@@ -138,6 +139,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
         </div>
       </section>
 
+      <div className="public-content-shell">
       <section className="public-section about-section" id="gioi-thieu">
         <div className="public-container about-grid">
           <div className="section-copy">
@@ -227,6 +229,8 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
         </div>
       </section>
 
+      </div>
+
       <PublicFooter settings={settings} />
     </main>
   );
@@ -239,7 +243,7 @@ function PublicHeader({ settings, menuOpen, setMenuOpen, onLogin }: {
   onLogin: () => void;
 }) {
   return <header className="public-header"><div className="public-container public-nav">
-    <a className="public-brand" href="#trang-chu"><img src={settings.logoUrl || "/pp-academy-logo.svg"} alt="" /><span><strong>{settings.schoolName}</strong><small>Thông tin nhà trường</small></span></a>
+    <a className="public-brand" href="#trang-chu"><img src={settings.logoUrl || "/pp-academy-logo.png"} alt="" /><span><strong>{settings.schoolName}</strong><small>Thông tin nhà trường</small></span></a>
     <button className="public-menu-button" aria-label={menuOpen ? "Đóng menu" : "Mở menu"} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}><Icon name={menuOpen ? "close" : "menu"} size={22} /></button>
     <nav aria-label="Điều hướng chính" className={menuOpen ? "open" : ""} onClick={() => setMenuOpen(false)}><a href="#trang-chu">Trang chủ</a><a href="#gioi-thieu">Giới thiệu</a><a href="#dao-tao">Đào tạo</a><a href="#tin-tuc">Tin tức</a></nav>
     <div className="public-nav-actions"><DownloadButton settings={settings} compact /><button className="nav-login" onClick={onLogin}>Đăng nhập</button></div>
@@ -257,7 +261,7 @@ function DownloadButton({ settings, compact = false, hero = false }: { settings:
 
 function PublicFooter({ settings }: { settings: SiteSettings }) {
   return <footer className="public-footer" id="lien-he"><div className="public-container footer-grid">
-    <div className="footer-brand"><img src={settings.logoUrl || "/pp-academy-logo.svg"} alt="" /><div><strong>{settings.schoolName}</strong><p>{settings.slogan}</p></div></div>
+    <div className="footer-brand"><img src={settings.logoUrl || "/pp-academy-logo.png"} alt="" /><div><strong>{settings.schoolName}</strong><p>{settings.slogan}</p></div></div>
     <div><strong>Liên hệ</strong><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`} target="_blank" rel="noreferrer">{settings.address} ↗</a><a href={`tel:${settings.phone.replace(/[^+0-9]/g, "")}`}>{settings.phone}</a><a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a></div>
     <div><strong>Truy cập nhanh</strong><a href="#gioi-thieu">Giới thiệu</a><a href="#dao-tao">Chương trình đào tạo</a><a href="#tin-tuc">Tin tức & sự kiện</a></div>
   </div><div className="public-container footer-bottom">© {new Date().getFullYear()} {settings.schoolName}.</div></footer>;

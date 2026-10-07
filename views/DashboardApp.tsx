@@ -158,7 +158,7 @@ export function DashboardApp() {
   if (!authReady)
     return (
       <div className="auth-loading">
-        <img className="sidebar-school-logo" src="/pp-academy-logo.svg" alt="" />
+        <img className="sidebar-school-logo" src="/pp-academy-logo.png" alt="" />
         <p>Đang kiểm tra phiên đăng nhập...</p>
       </div>
     );
@@ -171,7 +171,7 @@ export function DashboardApp() {
     <main className="app-shell">
       <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
         <div className="brand">
-          <img className="sidebar-school-logo" src="/pp-academy-logo.svg" alt="" />
+          <img className="sidebar-school-logo" src="/pp-academy-logo.png" alt="" />
           <div>
             <strong>
               PP <span>Academy</span>

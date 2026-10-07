@@ -113,7 +113,7 @@ export function LoginScreen({
     <main className="login-page">
       <section className="login-visual">
         <div className="login-brand">
-          <img className="login-school-logo" src="/pp-academy-logo.svg" alt="" />
+          <img className="login-school-logo" src="/pp-academy-logo.png" alt="" />
           <div>
             <strong>PP <span>Academy</span></strong>
             <small>Education Manager</small>
@@ -144,7 +144,7 @@ export function LoginScreen({
           <form className="login-form" onSubmit={login}>
             {onBack && <button className="login-home-link" type="button" onClick={onBack}>← Về trang chủ PP Academy</button>}
             <div className="mobile-login-brand">
-              <img className="login-school-logo" src="/pp-academy-logo.svg" alt="" />
+              <img className="login-school-logo" src="/pp-academy-logo.png" alt="" />
               <strong>PP Academy</strong>
             </div>
             <p className="login-kicker">Chào mừng trở lại</p>

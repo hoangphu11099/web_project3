@@ -88,6 +88,8 @@ export const entityConfigs: Record<string, EntityConfig> = {
     title: "Sinh viên",
     desc: "Tạo tài khoản và quản lý hồ sơ sinh viên.",
     createLabel: "Tạo sinh viên",
+    canEdit: true,
+    canDelete: true,
     canImport: true,
     columns: [
       ["Mã SV", "StudentCode"],
@@ -119,6 +121,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
     title: "Giảng viên",
     desc: "Quản lý hồ sơ và tài khoản giảng viên. Mã giảng viên được cấp tự động khi lưu.",
     createLabel: "Tạo giảng viên",
+    canEdit: true,
     canDelete: true,
     canImport: true,
     columns: [

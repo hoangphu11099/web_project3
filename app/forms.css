@@ -1,12 +1,13 @@
 /* Shared typography and controls. Loaded after the original page layouts. */
 :root {
-  --font-ui: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-ui: Tahoma, Arial, sans-serif;
+  --font-heading: "Segoe Script", "Palatino Linotype", Tahoma, serif;
   --font-geist-sans: var(--font-ui);
   --control-border: #cfd7e4;
   --control-muted: #65748b;
 }
 body { font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
-button, input, select, textarea { font-family: inherit; }
+button, input, select, textarea { font-family: var(--font-ui); }
 button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .workspace { min-width: 0; }
 .feature-heading { gap: 20px; }
