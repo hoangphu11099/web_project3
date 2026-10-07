@@ -37,6 +37,7 @@ const adminNav: [string, IconName][] = [
   ["Học kỳ", "calendar"],
   ["Học phần", "course"],
   ["Lớp học", "class"],
+  ["Phòng học", "class"],
   ["Môn học", "course"],
   ["Lịch thi", "calendar"],
   ["Cảnh báo học vụ", "warning"],
@@ -113,7 +114,10 @@ export function DashboardApp() {
 
   const act = (message: string) => {
     setToast(message);
-    if (token) apiRequest(token, "/metadata").then(meta => setMetadata({ ...emptyMetadata, ...(meta.data || {}) })).catch(() => setApiOnline(false));
+    if (token)
+      apiRequest(token, "/metadata")
+        .then((meta) => setMetadata({ ...emptyMetadata, ...(meta.data || {}) }))
+        .catch(() => setApiOnline(false));
     window.setTimeout(() => setToast(""), 3000);
   };
   const handleAuthenticated = (
@@ -158,20 +162,33 @@ export function DashboardApp() {
   if (!authReady)
     return (
       <div className="auth-loading">
-        <img className="sidebar-school-logo" src="/pp-academy-logo.png" alt="" />
+        <img
+          className="sidebar-school-logo"
+          src="/pp-academy-logo.png"
+          alt=""
+        />
         <p>Đang kiểm tra phiên đăng nhập...</p>
       </div>
     );
   if (!authUser || !token)
-    return showLogin
-      ? <LoginScreen onAuthenticated={handleAuthenticated} onBack={() => setShowLogin(false)} />
-      : <PublicWebsite onLogin={() => setShowLogin(true)} />;
+    return showLogin ? (
+      <LoginScreen
+        onAuthenticated={handleAuthenticated}
+        onBack={() => setShowLogin(false)}
+      />
+    ) : (
+      <PublicWebsite onLogin={() => setShowLogin(true)} />
+    );
 
   return (
     <main className="app-shell">
       <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
         <div className="brand">
-          <img className="sidebar-school-logo" src="/pp-academy-logo.png" alt="" />
+          <img
+            className="sidebar-school-logo"
+            src="/pp-academy-logo.png"
+            alt=""
+          />
           <div>
             <strong>
               PP <span>Academy</span>
@@ -180,43 +197,45 @@ export function DashboardApp() {
           </div>
         </div>
         <div className="sidebar-scroll">
-        <div className="signed-role">
-          <span>{role === "admin" ? "AD" : "GV"}</span>
-          <div>
-            <small>Đăng nhập với vai trò</small>
-            <strong>{role === "admin" ? "Quản trị viên" : "Giảng viên"}</strong>
+          <div className="signed-role">
+            <span>{role === "admin" ? "AD" : "GV"}</span>
+            <div>
+              <small>Xin Chào</small>
+              <strong>
+                {role === "admin" ? "Quản trị viên" : "Giảng viên"}
+              </strong>
+            </div>
           </div>
-        </div>
-        <p className="nav-label">Không gian làm việc</p>
-        <nav aria-label="Không gian làm việc">
-          {nav.map(([label, icon]) => (
-            <button
-              key={label}
-              className={active === label ? "active" : ""}
-              onClick={() => {
-                setActive(label);
-                setMenuOpen(false);
-              }}>
-              <span className="nav-icon">
-                <Icon name={icon} size={17} />
-              </span>
-              {label}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-help">
-          <div className="help-icon">?</div>
-          <strong>Trạng thái kết nối</strong>
-          <p>
-            {apiOnline
-              ? "Frontend đang kết nối được backend."
-              : "Chưa kết nối được backend. Kiểm tra API URL và server."}
-          </p>
-          <span
-            className={`connection-badge ${apiOnline ? "online" : "offline"}`}>
-            {apiOnline ? "Đã kết nối" : "Mất kết nối"}
-          </span>
-        </div>
+          <p className="nav-label">Không gian làm việc</p>
+          <nav aria-label="Không gian làm việc">
+            {nav.map(([label, icon]) => (
+              <button
+                key={label}
+                className={active === label ? "active" : ""}
+                onClick={() => {
+                  setActive(label);
+                  setMenuOpen(false);
+                }}>
+                <span className="nav-icon">
+                  <Icon name={icon} size={17} />
+                </span>
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-help">
+            <div className="help-icon">?</div>
+            <strong>Trạng thái kết nối</strong>
+            <p>
+              {apiOnline
+                ? "Frontend đang kết nối được backend."
+                : "Chưa kết nối được backend. Kiểm tra API URL và server."}
+            </p>
+            <span
+              className={`connection-badge ${apiOnline ? "online" : "offline"}`}>
+              {apiOnline ? "Đã kết nối" : "Mất kết nối"}
+            </span>
+          </div>
         </div>
         <div className="profile-card">
           <span className="avatar">{role === "admin" ? "AD" : "GV"}</span>
@@ -224,7 +243,11 @@ export function DashboardApp() {
             <strong>{authUser.fullName || authUser.username}</strong>
             <small>{authUser.username}</small>
           </span>
-          <button className="logout-button" onClick={logout} title="Đăng xuất" aria-label="Đăng xuất">
+          <button
+            className="logout-button"
+            onClick={logout}
+            title="Đăng xuất"
+            aria-label="Đăng xuất">
             <Icon name="logout" size={17} />
           </button>
         </div>

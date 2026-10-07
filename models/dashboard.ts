@@ -64,11 +64,17 @@ export const numericKeys = new Set([
   "teacherId",
   "majorId",
   "maxStudents",
+  "capacity",
   "credits",
   "maxFailedCourses",
 ]);
 
 export const entityConfigs: Record<string, EntityConfig> = {
+ "Phòng học": {
+  endpoint: "/rooms", title: "Phòng học", desc: "Quản lý phòng dùng để xếp lịch dạy và lịch thi.", createLabel: "Thêm phòng học", canEdit: true,
+  columns: [["Tên phòng", "Name"], ["Tòa nhà", "Building"], ["Sức chứa", "Capacity"], ["Mô tả", "Description"], ["Hoạt động", "IsActive"]],
+  fields: [{ key: "name", label: "Tên phòng", required: true, placeholder: "Ví dụ: A301" }, { key: "building", label: "Tòa nhà", placeholder: "Ví dụ: Tòa A" }, { key: "capacity", label: "Sức chứa (số người)", type: "number", required: true }, { key: "description", label: "Mô tả", textarea: true, placeholder: "Ví dụ: phòng máy, có máy chiếu..." }]
+ },
  "Năm học": {
   endpoint: "/academic-years", title: "Năm học", desc: "Bước 1: tạo năm học với khoảng ngày bao gồm các học kỳ.", createLabel: "Tạo năm học", canEdit: true,
   columns: [["Tên", "Name"], ["Bắt đầu", "StartDate"], ["Kết thúc", "EndDate"]],

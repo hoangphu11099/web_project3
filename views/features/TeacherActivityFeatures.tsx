@@ -472,6 +472,12 @@ export function ExerciseManager({
   const [gradeDrafts, setGradeDrafts] = useState<
     Record<number, SubmissionDraft>
   >({});
+  const [availability, setAvailability] = useState<Row | null>(null);
+  const [newDeadline, setNewDeadline] = useState("");
+  const [now, setNow] = useState(Date.now());
+  const submissionRequest = useRef(0);
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  const isOpen = (row: Row) => keyOf(row, "Status") === "open" && new Date(String(keyOf(row, "DueDate"))).getTime() > now;
   const [busy, setBusy] = useState(false);
   const load = async () => {
     try {
@@ -517,12 +523,16 @@ export function ExerciseManager({
     }
   };
   const viewSubmissions = async (exercise: Row) => {
+    const request = ++submissionRequest.current;
     setSelected(exercise);
+    setSubmissions([]);
+    setGradeDrafts({});
     try {
       const p = await apiRequest(
         token,
         `/exercises/${idOf(exercise)}/submissions`,
       );
+      if (request !== submissionRequest.current) return;
       const data = p.data || [];
       setSubmissions(data);
       const next: Record<number, SubmissionDraft> = {};
@@ -544,7 +554,7 @@ export function ExerciseManager({
     try {
       const p = await apiRequest(token, `/submissions/${id}/grade`, {
         method: "PUT",
-        body: JSON.stringify({ score: Number(d.score), feedback: d.feedback }),
+        body: JSON.stringify({ score: Number(d.score), feedback: d.feedback, submittedAt: keyOf(submission, "SubmittedAt") }),
       });
       onToast(p.message || "Đã chấm bài");
       if (selected) viewSubmissions(selected);
@@ -553,6 +563,14 @@ export function ExerciseManager({
     } finally {
       setBusy(false);
     }
+  };
+  const updateAvailability = async (exercise: Row, status: "open" | "closed") => {
+    setBusy(true); setError("");
+    try {
+      const p = await apiRequest(token, `/exercises/${idOf(exercise)}/availability`, { method: "PUT", body: JSON.stringify({ status, ...(status === "open" ? { dueDate: new Date(newDeadline).toISOString() } : {}) }) });
+      onToast(p.message); setAvailability(null); await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Không cập nhật được hạn nộp"); }
+    finally { setBusy(false); }
   };
   return (
     <section className="feature-page">
@@ -628,6 +646,8 @@ export function ExerciseManager({
         </form>
       )}
       {error && <div className="feature-error">! {error}</div>}
+      {availability && <form className="feature-form" onSubmit={event => { event.preventDefault(); void updateAvailability(availability, "open"); }}><h2>Mở lại / gia hạn: {display(keyOf(availability, "Title"))}</h2><label>Hạn nộp mới<input type="datetime-local" required value={newDeadline} onChange={event => setNewDeadline(event.target.value)} /></label><p>Đến hạn mới, hệ thống tự khóa nộp bài.</p><div className="form-actions"><button className="primary-button" disabled={busy}>Mở nhận bài</button><button type="button" className="refresh-button" onClick={() => setAvailability(null)}>Hủy</button></div></form>}
+      <button className="refresh-button" onClick={load}>Làm mới bài tập</button>
       <div className="split-layout">
         <div className="feature-table-wrap">
           <table>
@@ -653,12 +673,14 @@ export function ExerciseManager({
                     </td>
                     <td>{display(pick(row, "Class.ClassCode"))}<small className="cell-sub">{display(pick(row,"CourseOffering.Course.Name"))} · {display(pick(row,"CourseOffering.Semester.Name"))}</small></td>
                     <td>{display(keyOf(row, "DueDate"))}</td>
-                    <td>{statusLabel(keyOf(row, "Status"))}</td>
+                    <td>{isOpen(row) ? "Đang nhận bài" : "Đã khóa / hết hạn"}</td>
                     <td>
                       <div className="row-actions">
                         <button onClick={() => viewSubmissions(row)}>
                           Bài nộp
                         </button>
+                        <button disabled={busy} onClick={() => { setAvailability(row); setNewDeadline(""); }}>{isOpen(row) ? "Gia hạn" : "Mở khóa"}</button>
+                        {isOpen(row) && <button disabled={busy} onClick={() => updateAvailability(row, "closed")}>Khóa nộp</button>}
                       </div>
                     </td>
                   </tr>
@@ -674,7 +696,7 @@ export function ExerciseManager({
                 <strong>{display(keyOf(selected, "Title"))}</strong>
                 <span>{submissions.length} bài đã nộp</span>
               </div>
-              <button onClick={() => setSelected(null)}>
+              <button onClick={() => { submissionRequest.current++; setSelected(null); }}>
                 <Icon name="close" size={16} />
               </button>
             </div>

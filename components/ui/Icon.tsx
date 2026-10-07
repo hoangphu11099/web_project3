@@ -1,8 +1,9 @@
 import type { ReactNode, SVGProps } from "react";
 
-export type IconName = "home" | "students" | "teacher" | "class" | "course" | "calendar" | "warning" | "bell" | "assign" | "report" | "attendance" | "grade" | "exercise" | "search" | "menu" | "logout" | "plus" | "refresh" | "arrow" | "mail" | "check" | "upload" | "userPlus" | "close" | "eye" | "eyeOff" | "copy";
+export type IconName = "user" | "home" | "students" | "teacher" | "class" | "course" | "calendar" | "warning" | "bell" | "assign" | "report" | "attendance" | "grade" | "exercise" | "search" | "menu" | "logout" | "plus" | "refresh" | "arrow" | "mail" | "check" | "upload" | "userPlus" | "close" | "eye" | "eyeOff" | "copy";
 
 const paths: Record<IconName, ReactNode> = {
+  user: <><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></>,
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></>,
   students: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
   teacher: <><circle cx="10" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 12 0v2M18 8l4 2-4 2z"/></>,

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { apiRequest, display, idOf, inputDate, keyOf, pick, statusLabel } from "@/controllers/api.controller";
 import { entityConfigs, numericKeys, type MetadataData, type Row, type ToastHandler } from "@/models/dashboard";
 import { coursesForClass, changeDependentField } from "@/controllers/course-options";
+import { classFilterInfo, matchesClassFilters } from "@/controllers/class-filters";
 import { FormField } from "@/components/common/FormField";
 import { FileImport } from "@/components/common/FileImport";
 import { Icon } from "@/components/ui/Icon";
@@ -71,6 +72,7 @@ function vietnameseDayFromDate(value: string) {
 export function EntityPage({ active, token, metadata, onToast }: { active: string; token: string; metadata: MetadataData; onToast: ToastHandler }) {
   const config = entityConfigs[active]; const [rows, setRows] = useState<Row[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
   const [query, setQuery] = useState(""); const [formOpen, setFormOpen] = useState(false); const [form, setForm] = useState<Record<string, string>>({}); const [saving, setSaving] = useState(false); const [editing, setEditing] = useState<Row | null>(null);
+  const [roomFilter, setRoomFilter] = useState("");
   const [cohortFilter, setCohortFilter] = useState(""); const [majorFilter, setMajorFilter] = useState(""); const [classFilter, setClassFilter] = useState("");
   const [classAction, setClassAction] = useState<{ row: Row; kind: "assign" | "offer" | "students" | "schedule" } | null>(null); const [teacherId, setTeacherId] = useState(""); const [note, setNote] = useState(""); const [studentIds, setStudentIds] = useState<number[]>([]); const [allStudents, setAllStudents] = useState<Row[]>([]);
   const [savedSchedules, setSavedSchedules] = useState<Row[]>([]);
@@ -79,7 +81,7 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
 
   const load = async () => { setLoading(true); setError(""); try { const payload = await apiRequest(token, config.endpoint); setRows(Array.isArray(payload.data) ? payload.data : []); } catch (err) { setError(err instanceof Error ? err.message : "Không tải được dữ liệu"); } finally { setLoading(false); } };
   useEffect(() => { load(); }, [active, token]);
-  useEffect(() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setClassFilter(""); setFormOpen(false); setForm({}); setEditing(null); setClassAction(null); setError(""); }, [active]);
+  useEffect(() => { setRoomFilter(""); setQuery(""); setCohortFilter(""); setMajorFilter(""); setClassFilter(""); setFormOpen(false); setForm({}); setEditing(null); setClassAction(null); setError(""); }, [active]);
 
   useEffect(() => {
     setSavedSchedules([]); setScheduleLookupError("");
@@ -96,6 +98,7 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
     return () => { cancelled = true; };
   }, [token, classAction, scheduleDraft.courseId, scheduleDraft.semesterId]);
 
+  const isClassPage = active === "Lớp học";
   const isStudentPage = active === "Sinh viên";
   const classesByCode = new Map(metadata.classes.map((row) => [String(keyOf(row, "ClassCode") ?? "").toUpperCase(), row]));
   const majorsByCode = new Map(metadata.majors.map((row) => [String(keyOf(row, "Code") ?? "").toUpperCase(), row]));
@@ -122,10 +125,20 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
   const classOptions = Array.from(new Set(rows.map((row) => classInfo(row)).filter((info) =>
     info.classCode && (!cohortFilter || info.cohort === cohortFilter) && (!majorFilter || info.majorKey === majorFilter),
   ).map((info) => info.classCode))).sort();
+  const classCohorts = Array.from(new Set(rows.map(row => classFilterInfo(row).cohort))).sort();
+  const availableClassMajors = Array.from(new Map(rows.filter(row => matchesClassFilters(row, cohortFilter, "", "")).map(row => {
+    const value = classFilterInfo(row).major;
+    return [value, { value, label: value === "none" ? "Chưa có chuyên ngành" : String(pick(row, "Major.Name") || keyOf(metadata.majors.find(major => String(idOf(major)) === value), "Name") || `Ngành #${value}`) }];
+  })).values()).sort((a, b) => a.label.localeCompare(b.label, "vi"));
+  const availableClassRooms = Array.from(new Map(rows.filter(row => matchesClassFilters(row, cohortFilter, majorFilter, "")).map(row => {
+    const value = classFilterInfo(row).room;
+    return [value, { value, label: value === "none" ? "Chưa có phòng" : String(pick(row, "Room.Name") || keyOf(metadata.rooms.find(room => String(idOf(room)) === value), "Name") || `Phòng #${value}`) }];
+  })).values()).sort((a, b) => a.label.localeCompare(b.label, "vi"));
   const normalizedQuery = query.trim().toLowerCase();
   const hasStudentFilter = Boolean(normalizedQuery || cohortFilter || majorFilter || classFilter);
   const filtered = rows.filter((row) => {
     if (normalizedQuery && !JSON.stringify(row).toLowerCase().includes(normalizedQuery)) return false;
+    if (isClassPage) return matchesClassFilters(row, cohortFilter, majorFilter, roomFilter);
     if (!isStudentPage) return true;
     const info = classInfo(row);
     return (!cohortFilter || info.cohort === cohortFilter)
@@ -289,7 +302,12 @@ export function EntityPage({ active, token, metadata, onToast }: { active: strin
       <div className="form-actions"><button type="button" className="refresh-button" onClick={() => setClassAction(null)}>Hủy bỏ</button><button className="primary-button" disabled={saving}>{saving ? "Đang lưu..." : "Xác nhận"}</button></div>
     </form>}
     {error && <div className="feature-error">! {error}<button onClick={load}>Thử lại</button></div>}
-    <div className="feature-tools"><label className="feature-search"><Icon name="search" size={15} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Tìm trong ${config.title.toLowerCase()}...`} /></label>{isStudentPage && <><select aria-label="Lọc theo khóa" value={cohortFilter} onChange={(e) => { setCohortFilter(e.target.value); setMajorFilter(""); setClassFilter(""); }}><option value="">Tất cả khóa</option>{cohortOptions.map((cohort) => <option key={cohort} value={cohort}>{cohort}</option>)}</select><select aria-label="Lọc theo ngành" value={majorFilter} onChange={(e) => { setMajorFilter(e.target.value); setClassFilter(""); }}><option value="">Tất cả ngành</option>{majorOptions.map((major) => { const value = String(idOf(major) || keyOf(major, "Code") || ""); return <option key={value} value={value}>{display(keyOf(major, "Code"))} · {display(keyOf(major, "Name"))}</option>; })}</select><select aria-label="Lọc theo lớp" value={classFilter} onChange={(e) => setClassFilter(e.target.value)}><option value="">Tất cả lớp</option>{classOptions.map((classCode) => <option key={classCode} value={classCode}>{classCode}</option>)}</select></>}<button className="refresh-button" onClick={load}><Icon name="refresh" size={15} />Làm mới</button></div>
+    <div className="feature-tools"><label className="feature-search"><Icon name="search" size={15} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Tìm trong ${config.title.toLowerCase()}...`} /></label>{isStudentPage && <><select aria-label="Lọc theo khóa" value={cohortFilter} onChange={(e) => { setCohortFilter(e.target.value); setMajorFilter(""); setClassFilter(""); }}><option value="">Tất cả khóa</option>{cohortOptions.map((cohort) => <option key={cohort} value={cohort}>{cohort}</option>)}</select><select aria-label="Lọc theo ngành" value={majorFilter} onChange={(e) => { setMajorFilter(e.target.value); setClassFilter(""); }}><option value="">Tất cả ngành</option>{majorOptions.map((major) => { const value = String(idOf(major) || keyOf(major, "Code") || ""); return <option key={value} value={value}>{display(keyOf(major, "Code"))} · {display(keyOf(major, "Name"))}</option>; })}</select><select aria-label="Lọc theo lớp" value={classFilter} onChange={(e) => setClassFilter(e.target.value)}><option value="">Tất cả lớp</option>{classOptions.map((classCode) => <option key={classCode} value={classCode}>{classCode}</option>)}</select></>}{isClassPage && <>
+      <select aria-label="Lọc lớp theo khóa" value={cohortFilter} onChange={e => { setCohortFilter(e.target.value); setMajorFilter(""); setRoomFilter(""); }}><option value="">Tất cả khóa</option>{classCohorts.map(value => <option key={value} value={value}>{value === "none" ? "Chưa có khóa" : value}</option>)}</select>
+      <select aria-label="Lọc lớp theo chuyên ngành" value={majorFilter} onChange={e => { setMajorFilter(e.target.value); setRoomFilter(""); }}><option value="">Tất cả chuyên ngành</option>{availableClassMajors.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+      <select aria-label="Lọc lớp theo phòng" value={roomFilter} onChange={e => setRoomFilter(e.target.value)}><option value="">Tất cả phòng</option>{availableClassRooms.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+    </>}<button className="refresh-button" onClick={load}><Icon name="refresh" size={15} />Làm mới</button></div>
+    {isClassPage && <p className="filter-summary">Đang hiển thị <strong>{filtered.length}</strong> / {rows.length} lớp học{(query || cohortFilter || majorFilter || roomFilter) && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setRoomFilter(""); }}>Xóa bộ lọc</button></>}</p>}
     {isStudentPage && <p className="filter-summary">Đang hiển thị <strong>{filtered.length}</strong> / {rows.length} sinh viên{hasStudentFilter && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setClassFilter(""); }}>Xóa bộ lọc</button></>}</p>}
     <div className="feature-table-wrap"><table><thead><tr>{config.columns.map(([label]) => <th key={label}>{label}</th>)}<th>Thao tác</th></tr></thead><tbody>{loading ? <tr><td colSpan={config.columns.length + 1}>Đang tải dữ liệu...</td></tr> : filtered.length === 0 ? <tr><td colSpan={config.columns.length + 1}>{rows.length === 0 ? "Chưa có dữ liệu." : "Không có kết quả phù hợp với bộ lọc hiện tại."}</td></tr> : filtered.map((row, index) => <tr key={idOf(row) || index}>{config.columns.map(([label, path], col) => <td key={label}>{col === 0 ? <strong>{path.toLowerCase().includes("status") ? statusLabel(pick(row, path)) : display(pick(row, path))}</strong> : path.toLowerCase().includes("status") ? statusLabel(pick(row, path)) : display(pick(row, path))}</td>)}<td><div className="row-actions">{active === "Lớp học" && <><button onClick={() => { setClassAction({ row, kind: "assign" }); setTeacherId(String(keyOf(row, "TeacherID") || "")); }}>Phân công</button><button onClick={() => { setClassAction({ row, kind: "offer" }); setTeacherId(""); }}>Đề xuất</button><button onClick={() => openSchedule(row)}>Môn & lịch</button><button onClick={() => openStudents(row)}>Thêm SV</button></>}{config.canEdit && <button onClick={() => startEdit(row)}>Sửa</button>}{config.canDelete && <button className="danger" onClick={() => remove(row)}>Xóa</button>}</div></td></tr>)}</tbody></table></div>
   </section>;

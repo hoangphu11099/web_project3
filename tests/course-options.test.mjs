@@ -29,3 +29,21 @@ test("changing class or major clears the previous course, unrelated edits preser
  assert.equal(changeDependentField(form, "classId", "1").courseId, "3");
  assert.equal(form.courseId, "3");
 });
+
+const classContext = { exports: {}, require: () => api.exports };
+vm.runInNewContext(compile("../controllers/class-filters.ts"), classContext);
+const { classFilterInfo, matchesClassFilters } = classContext.exports;
+test("class filters combine cohort, major and displayed room; all includes unassigned classes", () => {
+ const rows = [
+  { ClassCode: "K26_WEB_01", CohortYear: 2026, MajorID: 1, RoomID: 2 },
+  { classCode: "K25_WEB_02", majorId: 1, roomId: 3 },
+  { ClassCode: "K26_GAME_01", Major: { ID: 2 }, Room: { ID: 2 } },
+  { ClassCode: "NEW" },
+ ];
+ assert.equal(rows.filter(row => matchesClassFilters(row, "", "", "")).length, 4);
+ assert.equal(rows.filter(row => matchesClassFilters(row, "K26", "1", "2")).length, 1);
+ assert.equal(rows.filter(row => matchesClassFilters(row, "K25", "", "2")).length, 0);
+ assert.equal(rows.filter(row => matchesClassFilters(row, "", "", "none")).length, 1);
+ assert.equal(classFilterInfo(rows[1]).cohort, "K25");
+ assert.equal(classFilterInfo(rows[2]).major, "2");
+});
