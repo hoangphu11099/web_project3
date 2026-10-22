@@ -8,6 +8,26 @@ export type TeachingOccurrence = {
   state: TeachingState;
 };
 
+export function nextTeachingLessons(rows: TeachingSchedule[], now: Date) {
+  const today = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  return rows.flatMap(item => {
+    if (item.offeringStatus !== "open") return [];
+    const first = [today,item.semesterStartDate.slice(0,10)].sort().pop()!;
+    const cursor = new Date(`${item.teachingDate || first}T12:00:00Z`);
+    if (!Number.isFinite(cursor.getTime())) return [];
+    for (let i=0;i<8;i++,cursor.setUTCDate(cursor.getUTCDate()+1)) {
+      const date=cursor.toISOString().slice(0,10);
+      if (item.semesterEndDate && date>item.semesterEndDate.slice(0,10)) return [];
+      if (item.semesterStartDate && date<item.semesterStartDate.slice(0,10)) { if(item.teachingDate)return [];continue; }
+      if (!item.teachingDate && cursor.getUTCDay()!==dayIndex(item.dayOfWeek)) continue;
+      const start=Date.parse(`${date}T${item.startTime || "00:00"}+07:00`),end=Date.parse(`${date}T${item.endTime || "23:59"}+07:00`);
+      if (end>now.getTime()) return [{item,date,start,end}];
+      if(item.teachingDate) return [];
+    }
+    return [];
+  }).sort((a,b)=>a.start-b.start || a.item.classCode.localeCompare(b.item.classCode));
+}
+
 const dayAliases: Record<string, number> = {
   sun: 0, sunday: 0, "chủ nhật": 0, cn: 0,
   mon: 1, monday: 1, "thứ 2": 1, "thứ hai": 1,
@@ -37,6 +57,19 @@ export function normalizeTeacherSchedules(payload: { data?: unknown }): Teaching
 }
 
 export function dayIndex(value: string) { return dayAliases[value.trim().toLowerCase()] ?? -1; }
+export function matchesTeachingWeekday(date: string | undefined, day: string, filter: string): boolean {
+  if (!filter) return true;
+  const weekday = date ? new Date(`${date.slice(0,10)}T12:00:00Z`).getUTCDay() : dayIndex(day);
+  return weekday === Number(filter);
+}
+export function matchesTeachingSession(session: string, startTime: string, filter: string): boolean {
+  if (!filter) return true;
+  const name = session.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const known: Record<string,string> = { sang:"morning", morning:"morning", trua:"afternoon", chieu:"afternoon", afternoon:"afternoon", toi:"evening", evening:"evening" };
+  const hour = Number(startTime.split(":")[0]);
+  const inferred = startTime && Number.isFinite(hour) ? (hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening") : "";
+  return (known[name] || inferred) === filter;
+}
 function sortDay(value: string) { const index = dayIndex(value); return index === 0 ? 7 : index < 0 ? 8 : index; }
 export function dayLabel(value: string) { const index = dayIndex(value); return index >= 0 ? labels[index] : value || "Chưa xác định"; }
 export function timeRange(item: TeachingSchedule) { return `${item.startTime || "—"} – ${item.endTime || "—"}`; }

@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   apiRequest,
   display,
@@ -30,6 +30,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 
 const adminNav: [string, IconName][] = [
   ["Tổng quan", "home"],
+  ["Hồ sơ cá nhân", "teacher"],
   ["Trang chủ trường", "home"],
   ["Sinh viên", "students"],
   ["Giảng viên", "teacher"],
@@ -47,6 +48,7 @@ const adminNav: [string, IconName][] = [
 ];
 const teacherNav: [string, IconName][] = [
   ["Tổng quan", "home"],
+  ["Hồ sơ cá nhân", "teacher"],
   ["Lớp của tôi", "class"],
   ["Lịch dạy", "calendar"],
   ["Điểm danh", "attendance"],
@@ -69,6 +71,9 @@ export function DashboardApp() {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [apiOnline, setApiOnline] = useState(false);
   const [toast, setToast] = useState("");
+  const [toastTone, setToastTone] = useState<"success" | "error">("success");
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
   const role: Role = authUser?.role === "teacher" ? "teacher" : "admin";
   const nav = role === "admin" ? adminNav : teacherNav;
   const today = useMemo(
@@ -112,13 +117,15 @@ export function DashboardApp() {
       .catch(() => setApiOnline(false));
   }, [token, authUser, role]);
 
-  const act = (message: string) => {
+  const act = (message: string, tone: "success" | "error" = "success") => {
     setToast(message);
-    if (token)
+    setToastTone(tone);
+    if (token && tone === "success")
       apiRequest(token, "/metadata")
         .then((meta) => setMetadata({ ...emptyMetadata, ...(meta.data || {}) }))
         .catch(() => setApiOnline(false));
-    window.setTimeout(() => setToast(""), 3000);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), tone === "error" ? 6000 : 4500);
   };
   const handleAuthenticated = (
     user: AuthUser,
@@ -239,10 +246,10 @@ export function DashboardApp() {
         </div>
         <div className="profile-card">
           <span className="avatar">{role === "admin" ? "AD" : "GV"}</span>
-          <span>
+          <button className="profile-link" onClick={() => setActive("Hồ sơ cá nhân")}>
             <strong>{authUser.fullName || authUser.username}</strong>
             <small>{authUser.username}</small>
-          </span>
+          </button>
           <button
             className="logout-button"
             onClick={logout}
@@ -298,7 +305,7 @@ export function DashboardApp() {
                         setNoticeOpen(false);
                         setActive("Thông báo");
                       }}>
-                      Mở trang thông báo →
+                      Mở trang thông báo <Icon name="arrowRight" size={16} />
                     </button>
                   )}
                 </div>
@@ -323,14 +330,15 @@ export function DashboardApp() {
               token={token}
               metadata={metadata}
               onToast={act}
+              onProfileUpdated={name => { const user = {...authUser,fullName:name}; saveSession(user,token,!!localStorage.getItem("token")); setAuthUser(user); }}
               onNavigate={setActive}
             />
           )}
         </div>
       </section>
       {toast && (
-        <div className="toast">
-          <Icon name="check" size={16} />
+        <div className={`toast toast-${toastTone}`} role={toastTone === "error" ? "alert" : "status"}>
+          {toastTone === "success" && <Icon name="check" size={16} />}
           {toast}
         </div>
       )}

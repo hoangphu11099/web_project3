@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vinext build",
     "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/teaching-dates.test.mjs tests/attendance-polling.test.mjs tests/course-options.test.mjs",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/teaching-dates.test.mjs tests/attendance-polling.test.mjs tests/course-options.test.mjs tests/class-schedule.test.mjs tests/learning-summary.test.mjs",
     "validate:artifact": "node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
@@ -20,6 +20,7 @@
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "react-icons": "^5.7.0",
     "vinext": "^1.0.0-beta.5"
   },
   "devDependencies": {

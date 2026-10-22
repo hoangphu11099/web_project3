@@ -42,7 +42,7 @@ export type EntityConfig = {
   canImport?: boolean;
 };
 
-export type ToastHandler = (message: string) => void;
+export type ToastHandler = (message: string, tone?: "success" | "error") => void;
 
 export const emptyMetadata: MetadataData = {
   academicYears: [],
@@ -135,9 +135,11 @@ export const entityConfigs: Record<string, EntityConfig> = {
       ["Họ tên", "User.FullName"],
       ["Tên đăng nhập", "User.Username"],
       ["Email", "User.Email"],
+      ["Ngành dạy", "Major.Name"],
       ["Trình độ", "Qualification"],
     ],
     fields: [
+      { key: "majorId", label: "Ngành dạy", optionKey: "majors", required: true },
       { key: "username", label: "Tên đăng nhập", required: true },
       {
         key: "password",
@@ -234,10 +236,10 @@ export const entityConfigs: Record<string, EntityConfig> = {
       },
       { key: "roomId", label: "Phòng", required: true, optionKey: "rooms" },
       { key: "examDate", label: "Ngày thi", type: "date", required: true },
-      { key: "session", label: "Ca thi", required: true },
+      { key: "session", label: "Ca thi", required: true, options: [{value:"Sáng",label:"Sáng · 07:30–11:30"},{value:"Chiều",label:"Trưa / Chiều · 13:30–16:30"},{value:"Tối",label:"Tối · 18:00–21:00"}] },
       { key: "startTime", label: "Giờ bắt đầu", type: "time", required: true },
       { key: "endTime", label: "Giờ kết thúc", type: "time", required: true },
-      { key: "examType", label: "Hình thức thi" },
+      { key: "examType", label: "Hình thức thi", required:true, options:[{value:"Trực tiếp",label:"Trực tiếp"},{value:"Online",label:"Online"}] },
       { key: "note", label: "Ghi chú" },
     ],
   },

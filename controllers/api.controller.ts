@@ -56,7 +56,7 @@ export function inputDate(value: unknown, withTime = false) {
 export function statusLabel(value: unknown) {
   const raw = String(value ?? "").toLowerCase();
   const map: Record<string, string> = {
-    planned: "Sắp tới", active: "Hoạt động", open: "Đang mở", closed: "Đã đóng", pending: "Chờ phản hồi",
+    planned: "Sắp tới", active: "Hoạt động", open: "Đang mở", closed: "Đã đóng", completed: "Đã kết thúc", pending: "Chờ phản hồi",
     accepted: "Đã chấp nhận", rejected: "Đã từ chối", approved: "Đã duyệt", draft: "Bản nháp",
     present: "Có mặt", absent: "Vắng", late: "Đi trễ", excused: "Có phép", sent: "Đã gửi",
     created: "Đã tạo", failed: "Gửi lỗi", enrolled: "Đã đăng ký",

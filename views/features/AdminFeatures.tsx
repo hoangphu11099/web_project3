@@ -12,6 +12,7 @@ import {
 } from "@/controllers/api.controller";
 import type { MetadataData, Row, ToastHandler } from "@/models/dashboard";
 import { FormField } from "@/components/common/FormField";
+import { TeachingOfferForm, TeachingOfferDetails } from "./TeachingOfferPlan";
 import { Icon } from "@/components/ui/Icon";
 
 export function WarningPage({
@@ -59,9 +60,7 @@ export function WarningPage({
       });
       onToast(`${p.message || "Đã tạo cảnh báo"} (${p.count ?? 0} sinh viên)`);
       await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không tạo được cảnh báo");
-    } finally {
+    } catch (err) { const message = err instanceof Error ? err.message : "Không tạo được cảnh báo"; setError(message); onToast(message, "error"); } finally {
       setBusy(false);
     }
   };
@@ -73,9 +72,7 @@ export function WarningPage({
       });
       onToast("Đã xóa cảnh báo");
       load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không xóa được");
-    }
+    } catch (e) { const message = e instanceof Error ? e.message : "Không xóa được"; setError(message); onToast(message, "error"); }
   };
   return (
     <section className="feature-page">
@@ -234,7 +231,7 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
       setSubject(""); setContent(""); setTargetValue(""); setRecipientEmail("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không gửi được thông báo");
+      { const message = err instanceof Error ? err.message : "Không gửi được thông báo"; setError(message); onToast(message, "error"); }
       await load();
     } finally { setBusy(false); }
   };
@@ -274,178 +271,20 @@ function notificationTargetLabel(value: string) {
   return labels[value.toLowerCase()] || display(value);
 }
 
-export function ClassOfferAdminPage({
-  token,
-  metadata,
-  onToast,
-}: {
-  token: string;
-  metadata: MetadataData;
-  onToast: ToastHandler;
-}) {
+export function ClassOfferAdminPage({ token, metadata, onToast }: { token: string; metadata: MetadataData; onToast: ToastHandler }) {
   const [rows, setRows] = useState<Row[]>([]);
-  const [classId, setClassId] = useState("");
-  const [teacherId, setTeacherId] = useState("");
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
   const load = async () => {
-    try {
-      const payload = await apiRequest(token, "/class-offers");
-      setRows(Array.isArray(payload.data) ? payload.data : []);
-      setError("");
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Không tải được danh sách đề xuất",
-      );
-    }
+    try { const p = await apiRequest(token, "/class-offers"); setRows(p.data || []); setError(""); }
+    catch (e) { setError(e instanceof Error ? e.message : "Unable to load offers"); }
   };
-
-  useEffect(() => {
-    load();
-  }, [token]);
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!classId) {
-      setError("Vui lòng chọn lớp cần phân công");
-      return;
-    }
-
-    if (!teacherId) {
-      setError("Vui lòng chọn giảng viên");
-      return;
-    }
-
-    if (!title.trim()) {
-      setError("Vui lòng nhập tiêu đề đề xuất");
-      return;
-    }
-
-    if (!content.trim()) {
-      setError("Vui lòng nhập nội dung đề xuất");
-      return;
-    }
-
-    setBusy(true);
-    setError("");
-
-    try {
-      const payload = await apiRequest(token, "/class-offers", {
-        method: "POST",
-        body: JSON.stringify({
-          classId: Number(classId),
-          teacherId: Number(teacherId),
-          title: title.trim(),
-          content: content.trim(),
-
-          // Giữ tương thích với backend cũ
-          message: content.trim(),
-        }),
-      });
-
-      onToast(payload.message || "Đã gửi đề xuất phân công");
-
-      setClassId("");
-      setTeacherId("");
-      setTitle("");
-      setContent("");
-
-      await load();
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Không gửi được đề xuất phân công",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="feature-page">
-      <div className="feature-heading">
-        <div>
-          <p className="eyebrow">Phân công có xác nhận</p>
-
-          <h1>Phân công lớp</h1>
-
-          <p>
-            Gửi đề xuất phân công chính thức để giảng viên xem xét, chấp nhận
-            hoặc từ chối. Hệ thống sẽ tự động kiểm tra trùng lịch.
-          </p>
-        </div>
-      </div>
-
-      <form className="feature-form" onSubmit={submit}>
-        <div className="form-grid">
-          <FormField
-            field={{
-              key: "classId",
-              label: "Lớp cần phân công",
-              optionKey: "classes",
-              required: true,
-            }}
-            value={classId}
-            metadata={metadata}
-            onChange={setClassId}
-          />
-
-          <FormField
-            field={{
-              key: "teacherId",
-              label: "Giảng viên được đề xuất",
-              optionKey: "teachers",
-              required: true,
-            }}
-            value={teacherId}
-            metadata={metadata}
-            onChange={setTeacherId}
-          />
-
-          <label>
-            Tiêu đề đề xuất
-            <input
-              required
-              maxLength={255}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Ví dụ: Đề xuất phân công giảng dạy lớp K25_WEB_02"
-            />
-          </label>
-
-          <label className="span-3">
-            Nội dung đề xuất
-            <textarea
-              required
-              rows={5}
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Kính gửi giảng viên, Phòng Đào tạo đề xuất phân công giảng dạy lớp..."
-            />
-          </label>
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" className="primary-button" disabled={busy}>
-            <Icon name="assign" size={15} />
-
-            {busy ? "Đang gửi đề xuất..." : "Gửi đề xuất"}
-          </button>
-        </div>
-      </form>
-
-      {error && <div className="feature-error">! {error}</div>}
-
-      <OfferTable rows={rows} />
-    </section>
-  );
+  useEffect(() => { load(); }, [token]);
+  return <section className="feature-page">
+    <div className="feature-heading"><div><h1>Phân công giảng dạy</h1><p>Lập kế hoạch môn, phòng và từng buổi học. Giáo viên xem chi tiết trước khi nhận; hệ thống tự xếp lịch sau khi chấp nhận.</p></div></div>
+    <TeachingOfferForm token={token} metadata={metadata} onToast={onToast} onSent={load} />
+    {error && <div className="feature-error" role="alert">{error}</div>}
+    <OfferTable rows={rows} />
+  </section>;
 }
 
 function OfferTable({ rows }: { rows: Row[] }) {
@@ -489,6 +328,7 @@ function OfferTable({ rows }: { rows: Row[] }) {
 
                   <td>
                     <div className="offer-content">{display(content)}</div>
+                    <TeachingOfferDetails row={row} />
                   </td>
 
                   <td>{statusLabel(keyOf(row, "Status"))}</td>

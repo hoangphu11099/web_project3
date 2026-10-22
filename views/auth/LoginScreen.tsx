@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
 import type { AuthUser } from "@/models/dashboard";
 import { Icon } from "@/components/ui/Icon";
+import { LoginLamp } from "@/components/common/LoginLamp";
 
 export function LoginScreen({
   onAuthenticated,
@@ -13,6 +14,7 @@ export function LoginScreen({
   onBack?: () => void;
 }) {
   const [mode, setMode] = useState<"login" | "forgot" | "change">("login");
+  const [lightOn, setLightOn] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -110,7 +112,7 @@ export function LoginScreen({
   };
 
   return (
-    <main className="login-page">
+    <main className={`login-page lamp-login${lightOn ? " is-lit" : ""}`}>
       <section className="login-visual">
         <div className="login-brand">
           <img className="login-school-logo" src="/pp-academy-logo.png" alt="" />
@@ -119,30 +121,25 @@ export function LoginScreen({
             <small>Education Manager</small>
           </div>
         </div>
+        <LoginLamp on={lightOn} onToggle={() => setLightOn(on => !on)} />
         <div className="visual-copy">
           <p>HỆ THỐNG QUẢN LÝ ĐÀO TẠO</p>
           <h1>
-            Một không gian.
+            Bật sáng tri thức.
             <br />
-            Mọi hoạt động học tập.
+            Bắt đầu hành trình.
           </h1>
           <span>
             Quản lý lớp học, sinh viên, điểm danh, điểm số và hoạt động giảng
             dạy trên một nền tảng duy nhất.
           </span>
         </div>
-        <div className="visual-orbit">
-          <i />
-          <i />
-          <i />
-          <b>PA</b>
-        </div>
         <small className="copyright">© 2026 PP Academy · Education Manager</small>
       </section>
       <section className="login-form-wrap">
         {mode === "login" && (
           <form className="login-form" onSubmit={login}>
-            {onBack && <button className="login-home-link" type="button" onClick={onBack}>← Về trang chủ PP Academy</button>}
+            {onBack && <button className="login-home-link" type="button" onClick={onBack}><Icon name="arrowLeft" size={16} /> Về trang chủ PP Academy</button>}
             <div className="mobile-login-brand">
               <img className="login-school-logo" src="/pp-academy-logo.png" alt="" />
               <strong>PP Academy</strong>
@@ -254,7 +251,7 @@ export function LoginScreen({
                 setError("");
                 setInfo("");
               }}>
-              ← Quay lại đăng nhập
+              <Icon name="arrowLeft" size={16} /> Quay lại đăng nhập
             </button>
           </form>
         )}

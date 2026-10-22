@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 
 // Add or reorder clips here. Files live in public/videos.
 const clips = [
@@ -63,9 +64,9 @@ export function HeroVideos({ poster }: { poster: string }) {
       onError={handleError}
     />}
     <div className="hero-video-controls public-container" role="group" aria-label="Video giới thiệu trường">
-      <button type="button" onClick={() => advance(-1)} disabled={failed.length >= clips.length - 1} aria-label="Video trước">←</button>
+      <button type="button" onClick={() => advance(-1)} disabled={failed.length >= clips.length - 1} aria-label="Video trước"><Icon name="arrowLeft" size={20} /></button>
       <div className="hero-video-tabs">{clips.map((clip, i) => <button type="button" key={clip.src} disabled={failed.includes(i)} aria-pressed={i === index} onClick={() => select(i)}>{clip.label}</button>)}</div>
-      <button type="button" onClick={() => advance(1)} disabled={failed.length >= clips.length - 1} aria-label="Video tiếp theo">→</button>
+      <button type="button" onClick={() => advance(1)} disabled={failed.length >= clips.length - 1} aria-label="Video tiếp theo"><Icon name="arrowRight" size={20} /></button>
       {unavailable && <span role="status">Video chưa phát được. Đang hiển thị ảnh.</span>}
     </div>
   </>;

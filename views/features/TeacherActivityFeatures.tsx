@@ -18,6 +18,7 @@ import {
 import type { MetadataData, Row, ToastHandler } from "@/models/dashboard";
 import type { TeachingSchedule } from "@/models/teaching-schedule";
 import { AttendanceQr } from "@/components/common/AttendanceQr";
+import { AttendanceProjection } from "@/components/common/AttendanceProjection";
 import { PanelHeader } from "@/components/common/PanelHeader";
 import { Icon } from "@/components/ui/Icon";
 
@@ -70,6 +71,7 @@ export function AttendanceManager({
   const [lessons, setLessons] = useState<TeachingSchedule[]>([]);
   const [sessions, setSessions] = useState<Row[]>([]);
   const [selectedSession, setSelectedSession] = useState<Row | null>(null);
+  const [projectionOpen, setProjectionOpen] = useState(false);
   const [records, setRecords] = useState<Row[]>([]);
   const activeSessionId = useRef(0);
   const recordsRevision = useRef(0);
@@ -123,7 +125,7 @@ export function AttendanceManager({
         apiRequest(token, "/attendance/sessions"),
       ]);
       const allLessons = normalizeTeacherSchedules(schedulePayload);
-      const today = todaySchedules(allLessons);
+      const today = todaySchedules(allLessons).filter(lesson => lesson.courseOfferingId > 0);
       setLessons(today);
       setForm((current) => ({
         ...current,
@@ -204,11 +206,10 @@ export function AttendanceManager({
       recordsRevision.current++;
       setRecords([]);
       setLastSyncedAt("");
-      setSelectedSession(session);
+      setSelectedSession({ ...session, Class: { ClassCode: selectedLesson?.classCode || pick(session, "Class.ClassCode") }, Course: { Name: selectedLesson?.courseName || pick(session, "Course.Name") } });
+      setProjectionOpen(true);
       await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không tạo được phiên");
-    } finally {
+    } catch (err) { const message = err instanceof Error ? err.message : "Không tạo được phiên"; setError(message); onToast(message, "error"); } finally {
       setBusy(false);
     }
   };
@@ -247,15 +248,13 @@ export function AttendanceManager({
         ),
       );
       onToast("Đã cập nhật điểm danh");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không cập nhật được");
-    } finally {
+    } catch (e) { const message = e instanceof Error ? e.message : "Không cập nhật được"; setError(message); onToast(message, "error"); } finally {
       pendingUpdates.current--;
       recordsRevision.current++;
       setRefreshVersion(value => value + 1);
     }
   };
-  const close = async () => {
+  const close = async (cancel = false) => {
     if (!selectedSession) return;
     const closingSessionId = idOf(selectedSession);
     pendingUpdates.current++;
@@ -264,18 +263,17 @@ export function AttendanceManager({
     try {
       const p = await apiRequest(
         token,
-        `/attendance/sessions/${idOf(selectedSession)}/close`,
+        `/attendance/sessions/${idOf(selectedSession)}/${cancel ? "cancel" : "close"}`,
         { method: "POST" },
       );
       onToast(p.message || "Đã đóng phiên");
       if (activeSessionId.current === closingSessionId) {
-        setSelectedSession({ ...selectedSession, IsActive: false });
+        setSelectedSession(p.data as Row);
+        setQrCode("");
         setTtl(0);
       }
       load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không đóng được phiên");
-    } finally {
+    } catch (e) { const message = e instanceof Error ? e.message : "Không đóng được phiên"; setError(message); onToast(message, "error"); } finally {
       pendingUpdates.current--;
       recordsRevision.current++;
       setRefreshVersion(value => value + 1);
@@ -283,7 +281,7 @@ export function AttendanceManager({
     }
   };
   return (
-    <section className="feature-page">
+    <section className="feature-page attendance-page">
       <div className="feature-heading">
         <div>
           <p className="eyebrow">Chỉ mở theo đúng tiết dạy hôm nay</p>
@@ -360,7 +358,7 @@ export function AttendanceManager({
             </p>
           ) : (
             <>
-              <div className="qr-code-card">
+              {sessionActive && <div className="qr-code-card">
                 <small>MÃ ĐIỂM DANH HIỆN TẠI</small>
                 <AttendanceQr
                   value={qrCode || String(keyOf(selectedSession, "Code") || "")}
@@ -378,23 +376,25 @@ export function AttendanceManager({
                   <Icon name="copy" size={14} />
                   Sao chép mã
                 </button>
-              </div>
+              </div>}
+              <div className="attendance-metrics"><div><strong>{records.length}</strong><span>Sinh viên</span></div><div><strong>{records.filter(r => keyOf((keyOf(r,"attendance") || {}) as Row,"CheckedInAt")).length}</strong><span>Đã quét QR</span></div><div><strong>{keyOf(selectedSession,"Status") === "confirmed" ? "Đã xác nhận" : keyOf(selectedSession,"Status") === "cancelled" ? "Đã hủy" : "Chờ xác nhận"}</strong><span>Trạng thái phiên</span></div></div>
               <div className="form-actions">
+                {sessionActive && <button type="button" className="primary-button" onClick={() => setProjectionOpen(true)}>Trình chiếu QR lên TV</button>}
                 <button
                   className="refresh-button"
                   onClick={() => selectSession(selectedSession)}>
                   <Icon name="refresh" size={15} />
                   Làm mới
                 </button>
-                {keyOf(selectedSession, "IsActive") !== false && (
+                {keyOf(selectedSession, "Status") === "pending" && (
                   <button
-                    className="danger-button"
-                    disabled={busy}
-                    onClick={close}>
-                    Đóng phiên
+                    className="primary-button"
+                    disabled={busy || pendingUpdates.current > 0}
+                    onClick={() => close()}>
+                    Xác nhận điểm danh
                   </button>
                 )}
-              </div>
+              {keyOf(selectedSession,"Status") === "pending" && <button className="danger-button" disabled={busy} onClick={() => { if (confirm("Hủy phiên và bỏ toàn bộ kết quả điểm danh tạm thời?")) void close(true); }}>Hủy phiên điểm danh</button>}</div>
               <p className={`attendance-sync${syncError ? " attendance-sync-error" : ""}`} role="status">
                 {syncError ? `Chưa đồng bộ được: ${syncError}. Hệ thống sẽ thử lại.` : `${sessionActive ? "Tự cập nhật mỗi 3 giây" : "Phiên đã đóng"}${lastSyncedAt ? ` · Cập nhật lúc ${lastSyncedAt}` : " · Đang tải danh sách…"}`}
               </p>
@@ -420,6 +420,7 @@ export function AttendanceManager({
                         </span>
                       </div>
                       <select
+                        disabled={busy || keyOf(selectedSession,"Status") !== "pending"}
                         value={currentStatus}
                         onChange={(e) => updateStatus(record, e.target.value)}>
                         <option value="present">Có mặt</option>
@@ -435,6 +436,7 @@ export function AttendanceManager({
           )}
         </div>
       </div>
+      {projectionOpen && selectedSession && <AttendanceProjection session={selectedSession} records={records} code={qrCode} ttl={ttl} active={sessionActive} syncError={syncError} loaded={Boolean(lastSyncedAt)} onClose={() => setProjectionOpen(false)} />}
     </section>
   );
 }
@@ -474,7 +476,7 @@ export function ExerciseManager({
   >({});
   const [availability, setAvailability] = useState<Row | null>(null);
   const [newDeadline, setNewDeadline] = useState("");
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const submissionRequest = useRef(0);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   const isOpen = (row: Row) => keyOf(row, "Status") === "open" && new Date(String(keyOf(row, "DueDate"))).getTime() > now;
@@ -516,9 +518,7 @@ export function ExerciseManager({
       setForm(emptyForm);
       setFormOpen(false);
       await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không tạo được bài tập");
-    } finally {
+    } catch (err) { const message = err instanceof Error ? err.message : "Không tạo được bài tập"; setError(message); onToast(message, "error"); } finally {
       setBusy(false);
     }
   };
@@ -558,9 +558,7 @@ export function ExerciseManager({
       });
       onToast(p.message || "Đã chấm bài");
       if (selected) viewSubmissions(selected);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không chấm được bài");
-    } finally {
+    } catch (e) { const message = e instanceof Error ? e.message : "Không chấm được bài"; setError(message); onToast(message, "error"); } finally {
       setBusy(false);
     }
   };
@@ -568,8 +566,8 @@ export function ExerciseManager({
     setBusy(true); setError("");
     try {
       const p = await apiRequest(token, `/exercises/${idOf(exercise)}/availability`, { method: "PUT", body: JSON.stringify({ status, ...(status === "open" ? { dueDate: new Date(newDeadline).toISOString() } : {}) }) });
-      onToast(p.message); setAvailability(null); await load();
-    } catch (err) { setError(err instanceof Error ? err.message : "Không cập nhật được hạn nộp"); }
+      onToast(p.message || "Đã cập nhật trạng thái bài tập"); setAvailability(null); await load();
+    } catch (err) { const message = err instanceof Error ? err.message : "Không cập nhật được hạn nộp"; setError(message); onToast(message, "error"); }
     finally { setBusy(false); }
   };
   return (

@@ -14,6 +14,7 @@ export type SiteSettings = {
 };
 
 export type SchoolPost = {
+  category?: "news" | "student";
   id: number;
   title: string;
   slug: string;

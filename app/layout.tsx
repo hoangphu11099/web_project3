@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./forms.css";
 import "./school.css";
+import "./overview.css";
+import "./programs.css";
 
 export const metadata: Metadata = {
   title: "PP Academy — Thông tin nhà trường",
@@ -23,6 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
+      <head>
+        <link rel="preload" href="/fonts/kripa/Kripa-Variable.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
+      </head>
       <body>{children}</body>
     </html>
   );

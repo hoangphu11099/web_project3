@@ -44,7 +44,7 @@ export function FileImport({
       const failed = Math.max(total - success, 0);
 
       if (total === 0) {
-        onToast("File không có dữ liệu hợp lệ để import");
+        onToast("File không có dữ liệu hợp lệ để import", "error");
         return;
       }
 
@@ -52,7 +52,7 @@ export function FileImport({
         const firstError =
           result.errors?.[0] || "Không có bản ghi nào được thêm";
 
-        onToast(`Import thất bại: ${firstError}`);
+        onToast(`Import thất bại: ${firstError}`, "error");
         return;
       }
 
@@ -66,13 +66,14 @@ export function FileImport({
         }
       }
 
-      onToast(message);
+      onToast(message, failed > 0 ? "error" : "success");
 
       // Chỉ tải lại bảng nếu thực sự có dòng thành công.
       onDone();
     } catch (error) {
       onToast(
         error instanceof Error ? error.message : "Không nhập được danh sách",
+        "error",
       );
     } finally {
       setBusy(false);

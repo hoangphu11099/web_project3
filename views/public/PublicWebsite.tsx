@@ -9,14 +9,22 @@ import {
   type SiteSettings,
 } from "@/models/publicWebsite";
 import { samplePosts, shufflePosts } from "@/models/publicContent";
+import { ProgramCatalog, ProgramDetail } from "./Programs";
 import { HeroVideos } from "./HeroVideos";
+import { ProgramImagesProvider, usePrograms } from "@/components/common/ProgramImages";
 import { Icon } from "@/components/ui/Icon";
 
 export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
+  return <ProgramImagesProvider><PublicWebsiteContent onLogin={onLogin} /></ProgramImagesProvider>;
+}
+
+function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
+  const programs = usePrograms();
   const [settings, setSettings] = useState<SiteSettings>(defaultSiteSettings);
   const [posts, setPosts] = useState<SchoolPost[]>([]);
   const [articleLoading, setArticleLoading] = useState(false);
   const [postSlug, setPostSlug] = useState("");
+  const [programSlug, setProgramSlug] = useState("");
   const [samples, setSamples] = useState<SchoolPost[]>(samplePosts);
   const selectedPost = [...posts, ...samples].find(
     (post) => post.slug === postSlug,
@@ -47,9 +55,10 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
     const navigate = () => {
       const hash = window.location.hash.slice(1);
       setPostSlug(hash.startsWith("bai-viet/") ? hash.slice(9) : "");
+      setProgramSlug(hash.startsWith("nganh-hoc/") ? hash.slice(10) : "");
       setMenuOpen(false);
       window.setTimeout(() => {
-        if (hash.startsWith("bai-viet/")) window.scrollTo({ top: 0 });
+        if (hash.startsWith("bai-viet/") || hash.startsWith("nganh-hoc/")) window.scrollTo({ top: 0 });
         else
           document
             .getElementById(hash || "trang-chu")
@@ -81,6 +90,13 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
     };
   }, [postSlug, selectedPost, loading]);
 
+  if (programSlug) {
+    const program = programs.find(item => item.slug === programSlug);
+    return <main className="public-site"><PublicHeader settings={settings} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onLogin={onLogin} />
+      {program ? <ProgramDetail key={program.slug} program={program} settings={settings} /> : <section className="public-container public-section"><h1>Không tìm thấy ngành học</h1><a className="text-link" href="#dao-tao">Xem tất cả ngành học <Icon name="arrowRight" size={16} /></a></section>}
+      <PublicFooter settings={settings} /></main>;
+  }
+
   if (selectedPost) {
     return (
       <main className="public-site">
@@ -91,14 +107,14 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
           onLogin={onLogin}
         />
         <article className="public-article-page">
-          <a className="article-back" href="#tin-tuc">
-            ← Tất cả bài viết
+          <a className="article-back" href={selectedPost.category === "student" || selectedPost.id < 0 ? "#goc-sinh-vien" : "#tin-tuc"}>
+            <Icon name="arrowLeft" size={16} /> {selectedPost.category === "student" || selectedPost.id < 0 ? "Về Góc sinh viên" : "Tất cả bài viết"}
           </a>
           <div className="article-heading">
             <span>
               {selectedPost.id < 0
-                ? "Góc sinh viên · Bài viết mẫu"
-                : "Tin tức nhà trường"}
+                ? "Góc sinh viên · Câu chuyện minh họa"
+                : selectedPost.category === "student" ? "Câu chuyện sinh viên" : "Tin tức nhà trường"}
             </span>
             <h1>{selectedPost.title}</h1>
             <p>
@@ -146,15 +162,18 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
           </h1>
           <p>Bài viết có thể đã được gỡ hoặc đường dẫn không còn đúng.</p>
           <a className="text-link" href="#tin-tuc">
-            Quay lại tin tức →
+            Quay lại tin tức <Icon name="arrowRight" size={16} />
           </a>
         </section>
         <PublicFooter settings={settings} />
       </main>
     );
 
-  const featured = posts.find((post) => post.isFeatured) || posts[0];
-  const remainingPosts = posts.filter((post) => post.id !== featured?.id);
+  const newsPosts = posts.filter(post => post.category !== "student");
+  const featured = newsPosts.find((post) => post.isFeatured) || newsPosts[0];
+  const remainingPosts = newsPosts.filter((post) => post.id !== featured?.id);
+  const studentPosts = posts.filter(post => post.category === "student");
+  const stories = studentPosts.length ? studentPosts : samples;
 
   return (
     <main className="public-site">
@@ -188,7 +207,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
               Đăng nhập hệ thống <Icon name="user" size={17} />
             </button>
             <a href="#dao-tao" className="public-secondary hero-download">
-              Tìm hiểu ngành học <span aria-hidden="true">📜</span>
+              Tìm hiểu ngành học <Icon name="course" size={19} />
             </a>
           </div>
           <div className="home-shortcuts">
@@ -212,7 +231,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
                 hệ thống.
               </p>
               <a href="#dao-tao" className="text-link">
-                Xem các ngành đào tạo →
+                Xem các ngành đào tạo <Icon name="arrowRight" size={16} />
               </a>
             </div>
             <div className="about-visual">
@@ -224,48 +243,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
           </div>
         </section>
 
-        <section className="public-section programs-section" id="dao-tao">
-          <div className="public-container">
-            <div className="public-section-heading">
-              <div>
-                <p className="public-section-label">Khối ngành đào tạo</p>
-                <h2>Các ngành đào tạo</h2>
-              </div>
-              <p>
-                Thông tin các nhóm ngành. Liên hệ nhà trường để được hướng dẫn
-                về môn học và kế hoạch đào tạo.
-              </p>
-            </div>
-            <div className="program-grid">
-              {[
-                [
-                  "01",
-                  "Công nghệ & Kỹ thuật",
-                  "Phát triển phần mềm, dữ liệu, thiết kế số và các giải pháp công nghệ ứng dụng.",
-                ],
-                [
-                  "02",
-                  "Kinh doanh & Quản trị",
-                  "Tư duy quản trị, marketing, tài chính và năng lực vận hành trong môi trường hiện đại.",
-                ],
-                [
-                  "03",
-                  "Thiết kế & Sáng tạo",
-                  "Phát triển khả năng thẩm mỹ, tư duy thiết kế và kỹ năng xây dựng sản phẩm sáng tạo.",
-                ],
-              ].map(([number, title, description]) => (
-                <article className="program-card" key={number}>
-                  <span>{number}</span>
-                  <h3>{title}</h3>
-                  <p>{description}</p>
-                  <a className="program-contact" href="#lien-he">
-                    Liên hệ tư vấn →
-                  </a>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ProgramCatalog />
 
         <section className="public-section news-section" id="tin-tuc">
           <div className="public-container">
@@ -278,7 +256,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
             </div>
             {loading ? (
               <div className="public-loading">Đang tải bài viết...</div>
-            ) : posts.length === 0 ? (
+            ) : newsPosts.length === 0 ? (
               <div className="public-loading">
                 Chưa có bài viết được xuất bản.
               </div>
@@ -298,7 +276,7 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
                       </small>
                       <strong>{featured.title}</strong>
                       <p>{featured.excerpt}</p>
-                      <b>Đọc bài viết →</b>
+                      <b>Đọc bài viết <Icon name="arrowRight" size={16} /></b>
                     </span>
                   </a>
                 )}
@@ -335,31 +313,31 @@ export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
           <div className="public-container">
             <div className="public-section-heading">
               <div>
-                <p className="public-section-label">Đọc thêm mỗi ngày</p>
+                <p className="public-section-label">Hành trình trưởng thành</p>
                 <h2>Góc sinh viên</h2>
               </div>
               <div>
-                <p>Bài viết mẫu về học tập và kỹ năng sinh viên.</p>
+                <p>Những hành trình học ngành, làm đồ án và chuẩn bị bước vào nghề.</p>
                 <button
-                  className="stories-refresh"
+                  hidden={studentPosts.length > 0} className="stories-refresh"
                   onClick={() => setSamples(shufflePosts(samplePosts))}>
-                  Đổi bài gợi ý ↻
+                  <Icon name="refresh" size={14} /> Đổi câu chuyện
                 </button>
               </div>
             </div>
             <div className="story-grid">
-              {samples.slice(0, 3).map((post) => (
+              {stories.slice(0, 3).map((post) => (
                 <a
                   className="story-card"
                   key={post.slug}
                   href={`#bai-viet/${post.slug}`}>
                   <img src={post.coverImageUrl} alt="" loading="lazy" />
                   <div>
-                    <small>Bài viết mẫu · Góc học tập</small>
+                    <small>{post.id < 0 ? "Câu chuyện minh họa" : "Câu chuyện sinh viên"}</small>
                     <h3>{post.title}</h3>
                     <p>{post.excerpt}</p>
                     <span>
-                      Đọc tiếp <b aria-hidden="true">↗</b>
+                      Đọc tiếp <Icon name="arrow" size={17} />
                     </span>
                   </div>
                 </a>
@@ -463,7 +441,7 @@ function DownloadButton({
       <a
         className={className}
         href={compact || hero ? "#tai-ung-dung" : "#lien-he"}>
-        <Icon name="upload" size={16} />
+        <Icon name="download" size={17} />
         {compact || hero ? "Ứng dụng sinh viên" : "Hỗ trợ cài đặt"}
       </a>
     );
@@ -474,7 +452,7 @@ function DownloadButton({
       href={settings.downloadUrl}
       target="_blank"
       rel="noreferrer">
-      <Icon name="upload" size={16} />
+      <Icon name="download" size={17} />
       {label}
     </a>
   );
@@ -497,13 +475,13 @@ function PublicFooter({ settings }: { settings: SiteSettings }) {
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`}
             target="_blank"
             rel="noreferrer">
-            {settings.address} ↗
+            <Icon name="location" size={16} /> {settings.address}
           </a>
           <a href={`tel:${settings.phone.replace(/[^+0-9]/g, "")}`}>
-            {settings.phone}
+            <Icon name="phone" size={16} /> {settings.phone}
           </a>
           <a href={`mailto:${settings.contactEmail}`}>
-            {settings.contactEmail}
+            <Icon name="mail" size={16} /> {settings.contactEmail}
           </a>
         </div>
         <div>
