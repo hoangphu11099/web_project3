@@ -361,14 +361,20 @@ h1, h2, h3, h4, h5, h6 {
 .study-cup {position:absolute;right:45px;bottom:5px;width:33px;height:43px;border-radius:3px 3px 10px 10px;background:#466b9d}.study-cup::after {content:"";position:absolute;right:-13px;top:8px;width:17px;height:22px;border:4px solid #466b9d;border-radius:50%;z-index:-1}
 .study-cup span {position:absolute;top:-35px;left:15px;height:25px;width:10px;border-left:2px solid #7d9bc0;border-radius:50%;opacity:0}.is-lit .study-cup span {animation:study-steam 3s ease-in-out infinite}
 .lamp-login .login-form-wrap {position:relative;isolation:isolate;padding:42px;overflow:hidden;border-radius:24px;width:100%;max-width:510px;justify-self:center;background:#213557;box-shadow:0 24px 80px #02091655;transition:box-shadow .8s,background .8s}
-.lamp-login .login-form-wrap::before {content:"";position:absolute;z-index:-2;width:180%;height:180%;top:-40%;left:-40%;background:conic-gradient(from 0deg,transparent 0deg,#60a5fa 55deg,transparent 95deg,transparent 180deg,#bfdbfe 235deg,transparent 275deg);animation:login-border-orbit 9s linear infinite;opacity:.35;transition:opacity .6s}
-.lamp-login .login-form-wrap::after {content:"";position:absolute;inset:2px;z-index:-1;border-radius:22px;background:#f3f7fd;transition:background .8s}
+@property --login-border-angle {syntax:"<angle>";initial-value:0deg;inherits:false}
+.lamp-login .login-form-wrap::before {content:"";position:absolute;inset:0;z-index:-2;border-radius:inherit;background:conic-gradient(from var(--login-border-angle),#1d4ed8 0deg,#1d4ed8 45deg,#22d3ee 80deg,#ecfeff 95deg,#6366f1 120deg,#1d4ed8 180deg,#a855f7 225deg,#f0abfc 260deg,#fff 275deg,#3b82f6 300deg,#1d4ed8 360deg);animation:login-border-orbit 3s linear infinite;opacity:.8;transition:opacity .6s;pointer-events:none}
+.lamp-login .login-form-wrap::after {content:"";position:absolute;inset:3px;z-index:-1;border-radius:21px;background:#f3f7fd;transition:background .8s;pointer-events:none}
 .lamp-login.is-lit .login-form-wrap {box-shadow:0 24px 70px #2563eb18,0 0 50px #bfdbfe55}
 .lamp-login.is-lit .login-form-wrap::before {opacity:1}.lamp-login.is-lit .login-form-wrap::after {background:#fff}
 .lamp-login .login-form {width:100%}.lamp-login .login-kicker {color:#2563eb}.lamp-login .login-form h2 {color:#15366b}
+.lamp-login .login-form > label > input:hover,
+.lamp-login .login-form > label > input:focus,
+.lamp-login .password-field:hover,
+.lamp-login .password-field:focus-within {border-color:#2563eb;box-shadow:0 0 0 3px #2563eb24,0 0 18px #2563eb40}
+.lamp-login .password-field {transition:border-color .2s,box-shadow .2s}
 @keyframes lamp-sway {0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
 @keyframes study-steam {0%{opacity:0;transform:translateY(8px)}50%{opacity:.6}100%{opacity:0;transform:translateY(-10px)}}
-@keyframes login-border-orbit {to{transform:rotate(360deg)}}
+@keyframes login-border-orbit {to{--login-border-angle:360deg}}
 @media(max-width:1100px){.lamp-login{gap:32px;padding:32px}.lamp-login .login-form-wrap{padding:32px}.study-scene{transform:scale(.85);transform-origin:left center}.lamp-login .visual-copy h1{font-size:32px}}
 @media(max-width:800px){.lamp-login{grid-template-columns:1fr;padding:24px;gap:24px}.lamp-login .login-visual{display:flex;min-height:0;max-width:510px;width:100%;justify-self:center}.lamp-login .login-brand{justify-content:center}.lamp-login .study-scene{height:220px;margin:0;transform:scale(.75);transform-origin:center top}.lamp-login .visual-copy,.lamp-login .copyright{display:none}.lamp-login .login-form-wrap{margin-top:-40px;padding:28px}.lamp-login .mobile-login-brand{display:none}}
 @media(max-width:420px){.lamp-login{padding:20px 16px}.lamp-login .study-scene{transform:scale(.65);transform-origin:left top}.lamp-login .login-form-wrap{padding:24px}.lamp-login .login-form h2{font-size:26px}}

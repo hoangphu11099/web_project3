@@ -11,11 +11,18 @@ import {
 import { samplePosts, shufflePosts } from "@/models/publicContent";
 import { ProgramCatalog, ProgramDetail } from "./Programs";
 import { HeroVideos } from "./HeroVideos";
-import { ProgramImagesProvider, usePrograms } from "@/components/common/ProgramImages";
+import {
+  ProgramImagesProvider,
+  usePrograms,
+} from "@/components/common/ProgramImages";
 import { Icon } from "@/components/ui/Icon";
 
 export function PublicWebsite({ onLogin }: { onLogin: () => void }) {
-  return <ProgramImagesProvider><PublicWebsiteContent onLogin={onLogin} /></ProgramImagesProvider>;
+  return (
+    <ProgramImagesProvider>
+      <PublicWebsiteContent onLogin={onLogin} />
+    </ProgramImagesProvider>
+  );
 }
 
 function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
@@ -58,7 +65,8 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
       setProgramSlug(hash.startsWith("nganh-hoc/") ? hash.slice(10) : "");
       setMenuOpen(false);
       window.setTimeout(() => {
-        if (hash.startsWith("bai-viet/") || hash.startsWith("nganh-hoc/")) window.scrollTo({ top: 0 });
+        if (hash.startsWith("bai-viet/") || hash.startsWith("nganh-hoc/"))
+          window.scrollTo({ top: 0 });
         else
           document
             .getElementById(hash || "trang-chu")
@@ -91,10 +99,32 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
   }, [postSlug, selectedPost, loading]);
 
   if (programSlug) {
-    const program = programs.find(item => item.slug === programSlug);
-    return <main className="public-site"><PublicHeader settings={settings} menuOpen={menuOpen} setMenuOpen={setMenuOpen} onLogin={onLogin} />
-      {program ? <ProgramDetail key={program.slug} program={program} settings={settings} /> : <section className="public-container public-section"><h1>Không tìm thấy ngành học</h1><a className="text-link" href="#dao-tao">Xem tất cả ngành học <Icon name="arrowRight" size={16} /></a></section>}
-      <PublicFooter settings={settings} /></main>;
+    const program = programs.find((item) => item.slug === programSlug);
+    return (
+      <main className="public-site">
+        <PublicHeader
+          settings={settings}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          onLogin={onLogin}
+        />
+        {program ? (
+          <ProgramDetail
+            key={program.slug}
+            program={program}
+            settings={settings}
+          />
+        ) : (
+          <section className="public-container public-section">
+            <h1>Không tìm thấy ngành học</h1>
+            <a className="text-link" href="#dao-tao">
+              Xem tất cả ngành học <Icon name="arrowRight" size={16} />
+            </a>
+          </section>
+        )}
+        <PublicFooter settings={settings} />
+      </main>
+    );
   }
 
   if (selectedPost) {
@@ -107,14 +137,25 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
           onLogin={onLogin}
         />
         <article className="public-article-page">
-          <a className="article-back" href={selectedPost.category === "student" || selectedPost.id < 0 ? "#goc-sinh-vien" : "#tin-tuc"}>
-            <Icon name="arrowLeft" size={16} /> {selectedPost.category === "student" || selectedPost.id < 0 ? "Về Góc sinh viên" : "Tất cả bài viết"}
+          <a
+            className="article-back"
+            href={
+              selectedPost.category === "student" || selectedPost.id < 0
+                ? "#goc-sinh-vien"
+                : "#tin-tuc"
+            }>
+            <Icon name="arrowLeft" size={16} />{" "}
+            {selectedPost.category === "student" || selectedPost.id < 0
+              ? "Về Góc sinh viên"
+              : "Tất cả bài viết"}
           </a>
           <div className="article-heading">
             <span>
               {selectedPost.id < 0
                 ? "Góc sinh viên · Câu chuyện minh họa"
-                : selectedPost.category === "student" ? "Câu chuyện sinh viên" : "Tin tức nhà trường"}
+                : selectedPost.category === "student"
+                  ? "Câu chuyện sinh viên"
+                  : "Tin tức nhà trường"}
             </span>
             <h1>{selectedPost.title}</h1>
             <p>
@@ -169,10 +210,10 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
       </main>
     );
 
-  const newsPosts = posts.filter(post => post.category !== "student");
+  const newsPosts = posts.filter((post) => post.category !== "student");
   const featured = newsPosts.find((post) => post.isFeatured) || newsPosts[0];
   const remainingPosts = newsPosts.filter((post) => post.id !== featured?.id);
-  const studentPosts = posts.filter(post => post.category === "student");
+  const studentPosts = posts.filter((post) => post.category === "student");
   const stories = studentPosts.length ? studentPosts : samples;
 
   return (
@@ -236,7 +277,7 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
             </div>
             <div className="about-visual">
               <img
-                src="/pp-academy-library.webp"
+                src="https://i.pinimg.com/736x/6b/ea/c3/6beac3914fd768904cb963fed155aa5f.jpg"
                 alt="Không gian học tập PP Academy"
               />
             </div>
@@ -276,7 +317,9 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
                       </small>
                       <strong>{featured.title}</strong>
                       <p>{featured.excerpt}</p>
-                      <b>Đọc bài viết <Icon name="arrowRight" size={16} /></b>
+                      <b>
+                        Đọc bài viết <Icon name="arrowRight" size={16} />
+                      </b>
                     </span>
                   </a>
                 )}
@@ -317,9 +360,13 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
                 <h2>Góc sinh viên</h2>
               </div>
               <div>
-                <p>Những hành trình học ngành, làm đồ án và chuẩn bị bước vào nghề.</p>
+                <p>
+                  Những hành trình học ngành, làm đồ án và chuẩn bị bước vào
+                  nghề.
+                </p>
                 <button
-                  hidden={studentPosts.length > 0} className="stories-refresh"
+                  hidden={studentPosts.length > 0}
+                  className="stories-refresh"
                   onClick={() => setSamples(shufflePosts(samplePosts))}>
                   <Icon name="refresh" size={14} /> Đổi câu chuyện
                 </button>
@@ -333,7 +380,11 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
                   href={`#bai-viet/${post.slug}`}>
                   <img src={post.coverImageUrl} alt="" loading="lazy" />
                   <div>
-                    <small>{post.id < 0 ? "Câu chuyện minh họa" : "Câu chuyện sinh viên"}</small>
+                    <small>
+                      {post.id < 0
+                        ? "Câu chuyện minh họa"
+                        : "Câu chuyện sinh viên"}
+                    </small>
                     <h3>{post.title}</h3>
                     <p>{post.excerpt}</p>
                     <span>

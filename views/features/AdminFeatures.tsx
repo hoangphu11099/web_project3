@@ -11,159 +11,11 @@ import {
   statusLabel,
 } from "@/controllers/api.controller";
 import type { MetadataData, Row, ToastHandler } from "@/models/dashboard";
-import { FormField } from "@/components/common/FormField";
+
 import { TeachingOfferForm, TeachingOfferDetails } from "./TeachingOfferPlan";
 import { Icon } from "@/components/ui/Icon";
 
-export function WarningPage({
-  token,
-  metadata,
-  onToast,
-}: {
-  token: string;
-  metadata: MetadataData;
-  onToast: ToastHandler;
-}) {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [error, setError] = useState("");
-  const [semesterId, setSemesterId] = useState("");
-  const [minGpa, setMinGpa] = useState("2.0");
-  const [maxFailed, setMaxFailed] = useState("2");
-  const [busy, setBusy] = useState(false);
-  const load = async () => {
-    try {
-      const p = await apiRequest(token, "/academic-warnings");
-      setRows(p.data || []);
-      setError("");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không tải được cảnh báo");
-    }
-  };
-  useEffect(() => {
-    load();
-    const active = metadata.semesters.find(
-      (s) => String(keyOf(s, "Status")).toLowerCase() === "active",
-    );
-    if (active && !semesterId) setSemesterId(String(idOf(active)));
-  }, [token, metadata.semesters.length]);
-  const generate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const p = await apiRequest(token, "/academic-warnings/generate", {
-        method: "POST",
-        body: JSON.stringify({
-          semesterId: Number(semesterId),
-          minGpa: Number(minGpa),
-          maxFailedCourses: Number(maxFailed),
-        }),
-      });
-      onToast(`${p.message || "Đã tạo cảnh báo"} (${p.count ?? 0} sinh viên)`);
-      await load();
-    } catch (err) { const message = err instanceof Error ? err.message : "Không tạo được cảnh báo"; setError(message); onToast(message, "error"); } finally {
-      setBusy(false);
-    }
-  };
-  const remove = async (row: Row) => {
-    if (!confirm("Xóa cảnh báo này?")) return;
-    try {
-      await apiRequest(token, `/academic-warnings/${idOf(row)}`, {
-        method: "DELETE",
-      });
-      onToast("Đã xóa cảnh báo");
-      load();
-    } catch (e) { const message = e instanceof Error ? e.message : "Không xóa được"; setError(message); onToast(message, "error"); }
-  };
-  return (
-    <section className="feature-page">
-      <div className="feature-heading">
-        <div>
-          <p className="eyebrow">Phân tích kết quả học tập</p>
-          <h1>Cảnh báo học vụ</h1>
-          <p>Tạo cảnh báo theo GPA và số môn không đạt của học kỳ.</p>
-        </div>
-      </div>
-      <form className="feature-form compact-form" onSubmit={generate}>
-        <div className="form-grid">
-          <FormField
-            field={{
-              key: "semesterId",
-              label: "Học kỳ",
-              optionKey: "semesters",
-              required: true,
-            }}
-            value={semesterId}
-            metadata={metadata}
-            onChange={setSemesterId}
-          />
-          <label>
-            GPA tối thiểu
-            <input
-              type="number"
-              step="0.01"
-              value={minGpa}
-              onChange={(e) => setMinGpa(e.target.value)}
-            />
-          </label>
-          <label>
-            Số môn trượt tối đa
-            <input
-              type="number"
-              value={maxFailed}
-              onChange={(e) => setMaxFailed(e.target.value)}
-            />
-          </label>
-        </div>
-        <button className="primary-button" disabled={busy}>
-          {busy ? "Đang phân tích..." : "Tạo / cập nhật cảnh báo"}
-        </button>
-      </form>
-      {error && <div className="feature-error">! {error}</div>}
-      <div className="feature-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Sinh viên</th>
-              <th>GPA</th>
-              <th>Môn không đạt</th>
-              <th>Lý do</th>
-              <th>Học kỳ</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={6}>Chưa có cảnh báo.</td>
-              </tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={idOf(row)}>
-                  <td>
-                    <strong>
-                      {display(pick(row, "Student.User.FullName"))}
-                    </strong>
-                  </td>
-                  <td>{display(keyOf(row, "GPA"))}</td>
-                  <td>{display(keyOf(row, "FailedCourses"))}</td>
-                  <td>{display(keyOf(row, "Reason"))}</td>
-                  <td>{display(pick(row, "Semester.Name"))}</td>
-                  <td>
-                    <div className="row-actions">
-                      <button className="danger" onClick={() => remove(row)}>
-                        Xóa
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
+export { WarningPage } from "./WarningPage";
 
 export function NotificationPage({ token, onToast }: { token: string; onToast: ToastHandler }) {
   const [rows, setRows] = useState<Row[]>([]);
@@ -267,7 +119,7 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
 }
 
 function notificationTargetLabel(value: string) {
-  const labels: Record<string, string> = { student: "Sinh viên", teacher: "Giảng viên", user: "Cá nhân", class: "Lớp", cohort: "Khóa", all_students: "Tất cả SV", all_teachers: "Tất cả GV", email: "Email ngoài" };
+  const labels: Record<string, string> = { student: "Sinh viên", teacher: "Giảng viên", user: "Cá nhân", class: "Lớp", cohort: "Khóa", all_students: "Tất cả SV", all_teachers: "Tất cả GV", email: "Email ngoài", academic_warning: "Cảnh báo học vụ" };
   return labels[value.toLowerCase()] || display(value);
 }
 
