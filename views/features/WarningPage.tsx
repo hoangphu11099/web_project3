@@ -79,7 +79,7 @@ export function WarningPage({ token, metadata, onToast }: { token: string; metad
   const preview = example && draft ? `Chào ${example.studentName} (${example.studentCode}),\n\nPP Academy thông báo cảnh báo học vụ trong học kỳ ${example.semesterName}:\n${draft.rows.filter(row => row.studentId === example.studentId).map(row => `- Lớp ${row.classCode} · Môn ${row.courseName}: ${violationDetail(row, draft.reason)}.`).join("\n")}\n\nĐề nghị sinh viên kiểm tra kết quả học tập, chuyên cần và liên hệ giáo viên hoặc phòng đào tạo để được hướng dẫn khắc phục.\n\nTrân trọng,\nPhòng Đào tạo · PP Academy` : "";
 
   return <section className="feature-page warning-page">
-    <div className="feature-heading"><div><p className="eyebrow">Theo dõi chuyên cần & kết quả học tập</p><h1>Cảnh báo học vụ</h1><p>Sinh viên nghỉ không phép, nghỉ quá số buổi hoặc rớt môn trong các lớp.</p></div></div>
+    <div className="feature-heading"><div><p className="eyebrow">Theo dõi chuyên cần & kết quả học tập</p><h1>Cảnh báo học vụ</h1><p>Theo dõi các trường hợp cần lưu ý về chuyên cần và kết quả học tập của sinh viên.</p></div></div>
     <div className="feature-form warning-filters">
       <div className="form-grid">
         <label>Học kỳ<select value={semesterId} disabled={sending} onChange={e => { setSemesterId(e.target.value); setSelected([]); setRows([]); }}><option value="">Chọn học kỳ</option>{metadata.semesters.map(s => <option key={idOf(s)} value={idOf(s)}>{display(keyOf(s, "Name"))}</option>)}</select></label>

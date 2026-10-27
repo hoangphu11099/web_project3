@@ -37,6 +37,7 @@ const adminNav: [string, IconName][] = [
   ["Năm học", "calendar"],
   ["Học kỳ", "calendar"],
   ["Học phần", "course"],
+  ["Đăng ký học phần", "students"],
   ["Lớp học", "class"],
   ["Phòng học", "class"],
   ["Môn học", "course"],
@@ -235,8 +236,8 @@ export function DashboardApp() {
             <strong>Trạng thái kết nối</strong>
             <p>
               {apiOnline
-                ? "Frontend đang kết nối được backend."
-                : "Chưa kết nối được backend. Kiểm tra API URL và server."}
+                ? "Hệ thống đang kết nối bình thường."
+                : "Kết nối bị gián đoạn. Vui lòng thử lại sau."}
             </p>
             <span
               className={`connection-badge ${apiOnline ? "online" : "offline"}`}>

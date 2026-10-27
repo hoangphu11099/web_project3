@@ -1,4 +1,5 @@
 import { ProfilePage } from "./ProfilePage";
+import { CourseRegistrationsPage } from "./CourseRegistrationsPage";
 import { TeacherClassesPage } from "./TeacherClassesPage";
 import { entityConfigs, type MetadataData, type Role, type ToastHandler } from "@/models/dashboard";
 import { EntityPage } from "./EntityPage";
@@ -10,6 +11,7 @@ import { TeacherSchedulePage } from "./TeacherSchedulePage";
 import { WebsiteAdminPage } from "./WebsiteAdminPage";
 
 export function FeatureRouter({ role, active, token, metadata, onToast, onNavigate, onProfileUpdated }: { role: Role; active: string; token: string; metadata: MetadataData; onToast: ToastHandler; onNavigate: (value: string) => void; onProfileUpdated:(name:string)=>void }) {
+  if (active === "Đăng ký học phần" && role === "admin") return <CourseRegistrationsPage token={token} metadata={metadata} onToast={onToast} />;
   if (active === "Hồ sơ cá nhân") return <ProfilePage token={token} onToast={onToast} onUpdated={onProfileUpdated} />;
   if (active === "Lớp của tôi") return <TeacherClassesPage token={token} />;
   if (entityConfigs[active]) return <EntityPage active={active} token={token} metadata={metadata} onToast={onToast} />;

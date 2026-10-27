@@ -294,6 +294,11 @@ button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .inline-action-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); align-items: start; gap: 20px; }
 .inline-action-card .action-card-heading { margin-bottom: 0; }
 .inline-action-card .student-picker { grid-column: 1 / -1; min-width: 0; }
+.learning-modal-body .registration-action-form { grid-template-columns: minmax(0, 1fr); margin: 0; }
+.registration-action-form > p { margin: 0; line-height: 1.7; }
+.registration-dialog-actions { width: 100%; }
+.registration-action-form .registration-dialog-actions > button { min-height: 44px; justify-content: center; font-size: 13px; }
+.registration-dialog-actions > button:disabled { opacity: .6; cursor: wait; }
 .feature-page select[multiple] { min-height: 200px; padding: 8px; background-image: none; }
 .feature-page select[multiple] option { padding: 10px 12px; margin: 2px 0; border-radius: 5px; }
 .feature-tools { gap: 12px; flex-wrap: wrap; }

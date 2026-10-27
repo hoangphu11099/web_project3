@@ -287,7 +287,7 @@ export function AttendanceManager({
           <p className="eyebrow">Chỉ mở theo đúng tiết dạy hôm nay</p>
           <h1>Điểm danh</h1>
           <p>
-            Chọn tiết được admin phân công; lớp, môn và ngày học được khóa tự động.
+            Ghi nhận chuyên cần của sinh viên theo buổi học được phân công.
           </p>
         </div>
       </div>

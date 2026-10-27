@@ -53,7 +53,7 @@ export function LoginScreen({
       onAuthenticated(user, data.token, remember);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Không thể kết nối backend.",
+        err instanceof Error ? err.message : "Không thể kết nối đến hệ thống. Vui lòng thử lại sau.",
       );
     } finally {
       setLoading(false);
@@ -82,7 +82,7 @@ export function LoginScreen({
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Không thể kết nối backend.",
+        err instanceof Error ? err.message : "Không thể kết nối đến hệ thống. Vui lòng thử lại sau.",
       );
     } finally {
       setLoading(false);

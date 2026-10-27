@@ -102,7 +102,7 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
   };
 
   return <section className="feature-page">
-    <div className="feature-heading"><div><p className="eyebrow">Thông báo trong app · Email tùy chọn</p><h1>Thông báo</h1><p>Gửi theo cá nhân, lớp, khóa hoặc toàn bộ vai trò.</p></div></div>
+    <div className="feature-heading"><div><p className="eyebrow">Quản lý thông báo</p><h1>Thông báo</h1><p>Soạn và gửi thông báo đến sinh viên, giảng viên hoặc nhóm người nhận.</p></div></div>
     <form className="feature-form" onSubmit={submit}>
       <div className="form-grid">
         <label>Đối tượng nhận<select value={targetType} onChange={(e) => changeTargetType(e.target.value)}><option value="class">Theo lớp</option><option value="cohort">Theo khóa</option><option value="student">Một sinh viên</option><option value="teacher">Một giảng viên</option><option value="all_students">Tất cả sinh viên</option><option value="all_teachers">Tất cả giảng viên</option><option value="email">Một email ngoài hệ thống</option></select></label>
@@ -132,7 +132,7 @@ export function ClassOfferAdminPage({ token, metadata, onToast }: { token: strin
   };
   useEffect(() => { load(); }, [token]);
   return <section className="feature-page">
-    <div className="feature-heading"><div><h1>Phân công giảng dạy</h1><p>Lập kế hoạch môn, phòng và từng buổi học. Giáo viên xem chi tiết trước khi nhận; hệ thống tự xếp lịch sau khi chấp nhận.</p></div></div>
+    <div className="feature-heading"><div><h1>Phân công giảng dạy</h1><p>Phân công giảng viên và lập kế hoạch giảng dạy theo môn học, phòng học và thời gian.</p></div></div>
     <TeachingOfferForm token={token} metadata={metadata} onToast={onToast} onSent={load} />
     {error && <div className="feature-error" role="alert">{error}</div>}
     <OfferTable rows={rows} />

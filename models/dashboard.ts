@@ -71,28 +71,28 @@ export const numericKeys = new Set([
 
 export const entityConfigs: Record<string, EntityConfig> = {
  "Phòng học": {
-  endpoint: "/rooms", title: "Phòng học", desc: "Quản lý phòng dùng để xếp lịch dạy và lịch thi.", createLabel: "Thêm phòng học", canEdit: true,
+  endpoint: "/rooms", title: "Phòng học", desc: "Quản lý thông tin phòng học phục vụ giảng dạy và tổ chức thi.", createLabel: "Thêm phòng học", canEdit: true,
   columns: [["Tên phòng", "Name"], ["Tòa nhà", "Building"], ["Sức chứa", "Capacity"], ["Mô tả", "Description"], ["Hoạt động", "IsActive"]],
   fields: [{ key: "name", label: "Tên phòng", required: true, placeholder: "Ví dụ: A301" }, { key: "building", label: "Tòa nhà", placeholder: "Ví dụ: Tòa A" }, { key: "capacity", label: "Sức chứa (số người)", type: "number", required: true }, { key: "description", label: "Mô tả", textarea: true, placeholder: "Ví dụ: phòng máy, có máy chiếu..." }]
  },
  "Năm học": {
-  endpoint: "/academic-years", title: "Năm học", desc: "Bước 1: tạo năm học với khoảng ngày bao gồm các học kỳ.", createLabel: "Tạo năm học", canEdit: true,
+  endpoint: "/academic-years", title: "Năm học", desc: "Quản lý năm học và thời gian đào tạo.", createLabel: "Tạo năm học", canEdit: true,
   columns: [["Tên", "Name"], ["Bắt đầu", "StartDate"], ["Kết thúc", "EndDate"]],
   fields: [{key:"name",label:"Tên năm học (VD: 2026–2027)",required:true},{key:"startDate",label:"Ngày bắt đầu",type:"date",required:true},{key:"endDate",label:"Ngày kết thúc",type:"date",required:true}]
  },
  "Học kỳ": {
-  endpoint: "/semesters", title: "Học kỳ", desc: "Bước 2: tạo học kỳ trong năm học. Đóng kỳ vẫn giữ lịch sử học phần và điểm.", createLabel: "Tạo học kỳ", canEdit: true,
+  endpoint: "/semesters", title: "Học kỳ", desc: "Quản lý học kỳ và theo dõi tiến độ đào tạo theo năm học.", createLabel: "Tạo học kỳ", canEdit: true,
   columns: [["Tên", "Name"],["Năm học", "AcademicYear.Name"],["Bắt đầu", "StartDate"],["Kết thúc", "EndDate"],["Trạng thái","Status"]],
   fields: [{key:"name",label:"Tên học kỳ (VD: HK1 2026–2027)",required:true},{key:"academicYearId",label:"Năm học",optionKey:"academicYears",required:true},{key:"startDate",label:"Ngày bắt đầu",type:"date",required:true},{key:"endDate",label:"Ngày kết thúc",type:"date",required:true},{key:"status",label:"Trạng thái",required:true,options:[{value:"planned",label:"Sắp tới"},{value:"active",label:"Đang mở"},{value:"closed",label:"Đã đóng"}]}]
  },
  "Học phần": {
-  endpoint:"/course-offerings",title:"Học phần",desc:"Mỗi học phần là một môn của một lớp trong một học kỳ. Mở hoặc cập nhật lịch tại Lớp học → Môn & lịch.",
+  endpoint:"/course-offerings",title:"Học phần",desc:"Theo dõi các học phần được tổ chức theo lớp và học kỳ.",
   columns:[["Lớp","Class.ClassCode"],["Môn","Course.Name"],["Học kỳ","Semester.Name"],["Giảng viên","Teacher.User.FullName"],["Phòng","Room.Name"],["Trạng thái","Status"]]
  },
   "Sinh viên": {
     endpoint: "/students",
     title: "Sinh viên",
-    desc: "Tạo tài khoản và quản lý hồ sơ sinh viên.",
+    desc: "Quản lý hồ sơ, tài khoản và thông tin học tập của sinh viên.",
     createLabel: "Tạo sinh viên",
     canEdit: true,
     canDelete: true,
@@ -125,7 +125,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
   "Giảng viên": {
     endpoint: "/teachers",
     title: "Giảng viên",
-    desc: "Quản lý hồ sơ và tài khoản giảng viên. Mã giảng viên được cấp tự động khi lưu.",
+    desc: "Quản lý hồ sơ, tài khoản và thông tin chuyên môn của giảng viên.",
     createLabel: "Tạo giảng viên",
     canEdit: true,
     canDelete: true,
@@ -157,7 +157,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
   "Lớp học": {
     endpoint: "/classes",
     title: "Lớp học",
-    desc: "Lớp sinh viên tồn tại qua nhiều học kỳ. Xếp sinh viên, sau đó mở môn và lịch theo từng kỳ.",
+    desc: "Quản lý danh sách lớp, sinh viên và kế hoạch học tập theo học kỳ.",
     createLabel: "Tạo lớp học",
     columns: [
       ["Mã lớp", "ClassCode"],
@@ -209,7 +209,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
   "Lịch thi": {
     endpoint: "/exam-schedules",
     title: "Lịch thi",
-    desc: "Tạo, chỉnh sửa và xóa lịch thi; backend tự kiểm tra trùng phòng.",
+    desc: "Quản lý lịch thi, thời gian và phòng thi theo lớp và môn học.",
     createLabel: "Tạo lịch thi",
     canDelete: true,
     canEdit: true,
