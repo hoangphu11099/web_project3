@@ -1,4 +1,5 @@
 export type RegistrationOffering = {
+	OfferingCode?: string;
   ID: number; CourseID: number; ClassID: number; SemesterID: number; TeacherID: number; RoomID: number;
   Course?: { Name: string; Code: string }; Class?: { ClassCode: string; MajorID: number };
   Semester?: { Name: string }; Teacher?: { User?: { FullName: string } }; Room?: { Name: string };

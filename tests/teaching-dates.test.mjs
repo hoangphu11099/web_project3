@@ -9,6 +9,13 @@ const context = { exports: {}, require: () => ({ keyOf: (row, key) => row[key] }
 vm.runInNewContext(output, context);
 const { todaySchedules, schedulesForWeek, teachingState } = context.exports;
 const {nextTeachingLessons}=context.exports;
+test("offering popup sorts calendar dates and separates completed lesson times",()=>{
+ const make=(id,date,start="13:30",end="16:30")=>({...item,id,teachingDate:date,startTime:start,endTime:end});
+ const lessons=context.exports.offeringLessonDates([make(1,"2026-11-09"),make(2,"2026-11-04"),make(3,"2026-11-06"),make(4,"2026-11-09","07:30","10:30")],new Date("2026-11-09T10:30:00+07:00"));
+ assert.deepEqual(Array.from(lessons,l=>l.id),[2,3,4,1]);
+ assert.deepEqual(Array.from(lessons.filter(l=>l.ended),l=>l.id),[2,3,4]);
+ assert.deepEqual(Array.from(lessons.filter(l=>!l.ended),l=>l.id),[1]);
+});
 test("next lesson skips ended dates and rolls a recurring schedule to next week",()=>{
  const now=new Date("2026-10-13T08:00:00+07:00");
  const dated={...item,teachingDate:"2026-10-14",classCode:"C1"};

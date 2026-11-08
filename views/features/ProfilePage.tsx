@@ -1,10 +1,11 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useState } from "react";
 import { apiRequest, display, keyOf, pick } from "@/controllers/api.controller";
 import type { Row, ToastHandler } from "@/models/dashboard";
 
 export function ProfilePage({token,onToast,onUpdated}:{token:string;onToast:ToastHandler;onUpdated:(name:string)=>void}) {
- const [profile,setProfile]=useState<Row|null>(null), [error,setError]=useState("");
+ const [profile,setProfile]=useState<Row|null>(null), [error,setError]=useErrorFeedback();
  const [form,setForm]=useState({fullName:"",email:"",phone:"",address:""});
  const [password,setPassword]=useState({currentPassword:"",newPassword:"",confirm:""});
  const [busy,setBusy]=useState("");

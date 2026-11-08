@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useState } from "react";
 import { apiRequest, display, idOf, keyOf, pick } from "@/controllers/api.controller";
 import { classLessons, offeringStudyStatus } from "@/controllers/class-schedule";
@@ -12,7 +13,7 @@ function lessonsOf(row:Row) {return ((keyOf(row,"CourseOfferings") || []) as Row
 function finished(row:Row,now:number) {const courses=(keyOf(row,"CourseOfferings") || []) as Row[];return courses.length>0 && courses.every(o=>["closed","completed"].includes(offeringStudyStatus(o,now)));}
 
 export function TeacherClassesPage({token}:{token:string}) {
- const [rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const [rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(true),[error,setError]=useErrorFeedback();
  const [weekdayFilter,setWeekdayFilter]=useState("");
  const [sessionFilter,setSessionFilter]=useState("");
  const [tab,setTab]=useState("active"),[query,setQuery]=useState("");

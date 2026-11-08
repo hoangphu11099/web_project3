@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -7,7 +8,7 @@ import type { ToastHandler } from "@/models/dashboard";
 type Consultation = {id:number;fullName:string;phone:string;email:string;program:string;location:string;preferredSession:string;message:string;status:string;createdAt:string};
 export function ConsultationInbox({ token, onToast }: {token:string;onToast:ToastHandler}) {
   const [rows,setRows] = useState<Consultation[]>([]);
-  const [error,setError] = useState("");
+  const [error,setError] = useErrorFeedback();
   const [loading,setLoading] = useState(true);
   const [filter,setFilter] = useState("");
   const [busy,setBusy] = useState(0);

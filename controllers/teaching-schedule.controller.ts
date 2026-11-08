@@ -8,6 +8,21 @@ export type TeachingOccurrence = {
   state: TeachingState;
 };
 
+export function offeringLessonDates(rows: TeachingSchedule[], now: Date) {
+  return rows.flatMap(item => {
+    const dates: string[] = [];
+    if (item.teachingDate) dates.push(item.teachingDate.slice(0,10));
+    else {
+      const cursor = new Date(`${item.semesterStartDate.slice(0,10)}T12:00:00Z`);
+      const end = item.semesterEndDate.slice(0,10);
+      for(let i=0; i<1500 && Number.isFinite(cursor.getTime()) && cursor.toISOString().slice(0,10)<=end; i++,cursor.setUTCDate(cursor.getUTCDate()+1)) {
+        if(cursor.getUTCDay()===dayIndex(item.dayOfWeek)) dates.push(cursor.toISOString().slice(0,10));
+      }
+    }
+    return dates.map(date => ({...item,teachingDate:date,ended:Date.parse(`${date}T${item.endTime||"23:59:59"}+07:00`)<=now.getTime()}));
+  }).sort((a,b)=>a.teachingDate.localeCompare(b.teachingDate)||a.startTime.localeCompare(b.startTime)||a.id-b.id);
+}
+
 export function nextTeachingLessons(rows: TeachingSchedule[], now: Date) {
   const today = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
   return rows.flatMap(item => {

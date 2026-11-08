@@ -3,15 +3,16 @@ import type { IconType } from "react-icons";
 import {
   FiUser, FiHome, FiUsers, FiUserCheck, FiLayout, FiBookOpen,
   FiCalendar, FiAlertTriangle, FiBell, FiExternalLink, FiBarChart2,
-  FiCheckSquare, FiStar, FiFileText, FiSearch, FiMenu, FiLogOut,
+  FiCheckSquare, FiStar, FiFileText, FiSearch, FiMenu, FiLogOut, FiLogIn,
   FiPlus, FiRefreshCw, FiArrowUpRight, FiMail, FiCheck, FiUpload,
   FiUserPlus, FiX, FiEye, FiEyeOff, FiCopy, FiArrowLeft, FiArrowRight,
   FiChevronRight, FiDownload, FiMaximize, FiMinimize, FiMapPin, FiPhone,
 } from "react-icons/fi";
 
-export type IconName = "user" | "home" | "students" | "teacher" | "class" | "course" | "calendar" | "warning" | "bell" | "assign" | "report" | "attendance" | "grade" | "exercise" | "search" | "menu" | "logout" | "plus" | "refresh" | "arrow" | "mail" | "check" | "upload" | "userPlus" | "close" | "eye" | "eyeOff" | "copy" | "arrowLeft" | "arrowRight" | "chevronRight" | "download" | "maximize" | "minimize" | "location" | "phone";
+export type IconName = "login" | "user" | "home" | "students" | "teacher" | "class" | "course" | "calendar" | "warning" | "bell" | "assign" | "report" | "attendance" | "grade" | "exercise" | "search" | "menu" | "logout" | "plus" | "refresh" | "arrow" | "mail" | "check" | "upload" | "userPlus" | "close" | "eye" | "eyeOff" | "copy" | "arrowLeft" | "arrowRight" | "chevronRight" | "download" | "maximize" | "minimize" | "location" | "phone";
 
 const icons: Record<IconName, IconType> = {
+  login: FiLogIn,
   user: FiUser, home: FiHome, students: FiUsers, teacher: FiUserCheck,
   class: FiLayout, course: FiBookOpen, calendar: FiCalendar, warning: FiAlertTriangle,
   bell: FiBell, assign: FiExternalLink, report: FiBarChart2, attendance: FiCheckSquare,

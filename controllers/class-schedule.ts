@@ -2,7 +2,46 @@ import { idOf, keyOf, pick } from "./api.controller";
 import { dayIndex } from "./teaching-schedule.controller";
 import type { Row } from "@/models/dashboard";
 
-export type ClassLesson = { date: string; startTime: string; endTime: string; session: string; offering: Row };
+export type ClassLesson = { date: string; startTime: string; endTime: string; session: string; offering: Row; scheduleId?: number };
+
+export type ClassScheduleFilter = { semesterId: string; courseId: string; from: string; to: string };
+export function matchesClassScheduleOffering(offering: Row, filter: ClassScheduleFilter): boolean {
+  return (!filter.semesterId || String(keyOf(offering,"SemesterID")) === filter.semesterId) && (!filter.courseId || String(keyOf(offering,"CourseID")) === filter.courseId);
+}
+export function filterClassLessons(lessons: ClassLesson[], filter: ClassScheduleFilter): ClassLesson[] {
+  if (filter.from && filter.to && filter.from > filter.to) return [];
+  return lessons.filter(l => matchesClassScheduleOffering(l.offering,filter) && (!filter.from || l.date >= filter.from) && (!filter.to || l.date <= filter.to))
+    .sort((a,b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+}
+export function classScheduleDateRange(preset: "all" | "today" | "week" | "month", now: number): { from: string; to: string } {
+  if (preset === "all") return {from:"",to:""};
+  const today = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(now));
+  const start = new Date(`${today}T12:00:00Z`), end = new Date(start);
+  if (preset === "week") {
+    const offset = (start.getUTCDay()+6)%7;
+    start.setUTCDate(start.getUTCDate()-offset); end.setTime(start.getTime()); end.setUTCDate(end.getUTCDate()+6);
+  } else if (preset === "month") {
+    start.setUTCDate(1); end.setUTCMonth(end.getUTCMonth()+1,0);
+  }
+  return {from:start.toISOString().slice(0,10),to:end.toISOString().slice(0,10)};
+}
+
+export function weekdaysForStartDate(selected: number[], previous: string, next: string): number[] {
+  const weekday = (value: string) => {
+    const date = new Date(`${value}T12:00:00Z`);
+    return Number.isFinite(date.getTime()) && date.toISOString().slice(0,10) === value ? date.getUTCDay() : -1;
+  };
+  const nextDay = weekday(next);
+  if (next && nextDay < 0) return selected;
+  const extraDays = selected.filter(day => day !== weekday(previous));
+  return [...new Set(nextDay < 0 ? extraDays : [...extraDays, nextDay])];
+}
+
+export function assignmentConflicts(offerings: Row[], plan: Pick<ClassLesson, "date" | "startTime" | "endTime">[], resource: "TeacherID" | "RoomID" | "ClassID", resourceId: string, excludedOfferingId = 0): ClassLesson[] {
+  if (!resourceId) return [];
+  return offerings.filter(o => keyOf(o, "Status") === "open" && idOf(o) !== excludedOfferingId && Number(keyOf(o, resource)) === Number(resourceId))
+    .flatMap(classLessons).filter(lesson => plan.some(p => p.date === lesson.date && p.startTime.slice(0,5) < lesson.endTime.slice(0,5) && lesson.startTime.slice(0,5) < p.endTime.slice(0,5)));
+}
 
 export function weeklyTeachingDates(start: string, count: number, weekdays: number[], end?: string): string[] {
   const cursor = new Date(`${start}T12:00:00Z`);
@@ -40,7 +79,7 @@ export function classLessons(offering: Row): ClassLesson[] {
   const lessons = new Map<string, ClassLesson>();
   for (const schedule of (keyOf(offering, "Schedules") || []) as Row[]) {
     const add = (date: string) => {
-      const lesson = { date, startTime: String(keyOf(schedule,"StartTime") || ""), endTime: String(keyOf(schedule,"EndTime") || ""), session: String(keyOf(schedule,"Session") || ""), offering };
+      const lesson = { date, startTime: String(keyOf(schedule,"StartTime") || ""), endTime: String(keyOf(schedule,"EndTime") || ""), session: String(keyOf(schedule,"Session") || ""), offering, scheduleId: idOf(schedule) };
       lessons.set(`${idOf(offering)}:${date}:${lesson.startTime}:${lesson.endTime}:${lesson.session}`, lesson);
     };
     const date = String(keyOf(schedule,"FullDate") || "").slice(0,10);

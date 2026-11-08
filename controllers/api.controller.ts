@@ -3,18 +3,25 @@ import type { MetadataData, Row } from "@/models/dashboard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 
+function notifyInvalidSession(token: string, message: string) {
+  if (token && typeof window !== "undefined") window.dispatchEvent(new CustomEvent("pp-auth-invalid", {detail:{token,message}}));
+}
+
 export async function apiRequest(token: string, path: string, options: RequestInit = {}) {
   if (!API_BASE) throw new Error("Chưa cấu hình NEXT_PUBLIC_API_URL trong .env.local");
   const headers = new Headers(options.headers ?? {});
   if (!(options.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (response.status === 401 && token) notifyInvalidSession(token,"Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.");
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     if (!response.ok) throw new Error(`Yêu cầu thất bại (${response.status})`);
     return response;
   }
   const payload = await response.json().catch(() => ({}));
+  if (response.status === 403 && payload.code === "PASSWORD_CHANGE_REQUIRED") notifyInvalidSession(token,payload.message);
+  if (response.ok && payload.requires_login) notifyInvalidSession(token,payload.message || "Vui lòng đăng nhập lại sau khi đổi mật khẩu.");
   if (!response.ok) throw new Error(payload.message || payload.error || `Yêu cầu thất bại (${response.status})`);
   return payload;
 }

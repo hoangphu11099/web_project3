@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
 import { programs } from "@/models/programs";
@@ -9,7 +10,7 @@ export function ProgramImageManager({token,onToast}:{token:string;onToast:ToastH
   const [images,setImages] = useState<Record<string,string>>({});
   const [drafts,setDrafts] = useState<Record<string,string>>({});
   const [loading,setLoading] = useState(true);
-  const [error,setError] = useState("");
+  const [error,setError] = useErrorFeedback();
   const [busy,setBusy] = useState("");
   const [query,setQuery] = useState("");
   useEffect(()=>{

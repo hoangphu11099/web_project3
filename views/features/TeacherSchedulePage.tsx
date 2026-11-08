@@ -1,10 +1,12 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
 import {
   nextTeachingLessons,
+  offeringLessonDates,
   matchesTeachingSession,
   matchesTeachingWeekday,
   addDays,
@@ -20,15 +22,18 @@ import {
   todaySchedules,
 } from "@/controllers/teaching-schedule.controller";
 import type { TeachingSchedule } from "@/models/teaching-schedule";
+import { FeatureDialog } from "@/components/common/FeatureDialog";
 import { Icon } from "@/components/ui/Icon";
 
 export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNavigate: (value: string) => void }) {
+  const [detailTab,setDetailTab] = useState<"upcoming"|"ended">("upcoming");
+  const [offeringDetail,setOfferingDetail] = useState<number|null>(null);
   const [scheduleTab,setScheduleTab] = useState("upcoming");
   const [weekdayFilter,setWeekdayFilter] = useState("");
   const [sessionFilter,setSessionFilter] = useState("");
   const [rows, setRows] = useState<TeachingSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [now, setNow] = useState(() => new Date());
   const [selectedWeek, setSelectedWeek] = useState(() => startOfTeachingWeek(new Date()));
 
@@ -55,6 +60,9 @@ export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNa
   const nextLesson = upcomingLessons.find(l=>matchesTeachingSession(l.item.session,l.item.startTime,sessionFilter) && matchesTeachingWeekday(l.date,l.item.dayOfWeek,weekdayFilter));
   const activeOfferings = new Set(upcomingLessons.map(l=>l.item.courseOfferingId));
   const displayedRows = filteredSchedules.filter(item => scheduleTab === "upcoming" ? activeOfferings.has(item.courseOfferingId) : !activeOfferings.has(item.courseOfferingId));
+  const offeringRows=Array.from(new Map(displayedRows.map(item=>[item.courseOfferingId,item])).values());
+  const detailRows=offeringLessonDates(filteredSchedules.filter(item=>item.courseOfferingId===offeringDetail),now);
+  const visibleDetails=detailRows.filter(item=>detailTab==="ended"?item.ended:!item.ended);
   const today = todaySchedules(filteredSchedules, now);
   const current = today.filter((item) => teachingState(item, now) === "current");
   const weekItems = schedulesForWeek(filteredSchedules, selectedWeek, now);
@@ -140,29 +148,9 @@ export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNa
         <div><h2>Lịch theo học phần</h2><p>Tách các môn còn lịch dạy và các môn đã kết thúc.</p></div>
       </div>
       <div className="teacher-tabs" role="tablist" aria-label="Lịch theo trạng thái"><button role="tab" aria-selected={scheduleTab==="upcoming"} onClick={()=>setScheduleTab("upcoming")}>Đang hoạt động / Sắp tới</button><button role="tab" aria-selected={scheduleTab==="ended"} onClick={()=>setScheduleTab("ended")}>Đã kết thúc</button></div>
-      <div className="feature-table-wrap">
-        <table>
-          <thead><tr><th>Thứ</th><th>Thời gian</th><th>Lớp</th><th>Môn học</th><th>Phòng</th><th>Học kỳ</th><th>Trạng thái</th></tr></thead>
-          <tbody>
-            {loading
-              ? <tr><td colSpan={7}>Đang tải dữ liệu...</td></tr>
-              : displayedRows.length === 0
-                ? <tr><td colSpan={7}>Chưa có lịch dạy được phân công.</td></tr>
-                : displayedRows.map((item) => {
-                    const state = teachingState(item, now);
-                    return <tr key={item.id}>
-                      <td><strong>{dayLabel(item.dayOfWeek)}</strong>{item.teachingDate && <small> · {item.teachingDate.split("-").reverse().join("/")}</small>}</td>
-                      <td>{timeRange(item)}<small className="table-sub">{item.session}</small></td>
-                      <td><strong>{item.classCode}</strong><small className="table-sub">{item.majorName}</small></td>
-                      <td>{item.courseName}<small className="table-sub">{item.courseCode}</small></td>
-                      <td>{item.roomName || "—"}<small className="table-sub">{item.building}</small></td>
-                      <td>{item.semesterName}<small className="table-sub">{item.semesterStartDate} – {item.semesterEndDate}</small></td>
-                      <td><span className={`teaching-badge ${state}`}>{scheduleTab === "ended" ? "Đã kết thúc" : teachingStateLabel(state)}</span></td>
-                    </tr>;
-                  })}
-          </tbody>
-        </table>
-      </div>
+      <div className="feature-table-wrap"><table><thead><tr><th>Môn học</th><th>Lớp</th><th>Học kỳ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{loading?<tr><td colSpan={5}>Đang tải…</td></tr>:offeringRows.map(item=><tr key={item.courseOfferingId} style={scheduleTab==="ended"?{color:"#94a3b8",background:"#f8fafc"}:undefined}><td><button className="refresh-button" onClick={()=>{setDetailTab(scheduleTab==="ended"?"ended":"upcoming");setOfferingDetail(item.courseOfferingId);}}>{item.courseName}</button><small className="table-sub">{item.courseCode}</small></td><td>{item.classCode}</td><td>{item.semesterName}</td><td>{scheduleTab==="ended"?"Đã kết thúc":"Còn lịch dạy"}</td><td><button className="refresh-button" onClick={()=>{setDetailTab(scheduleTab==="ended"?"ended":"upcoming");setOfferingDetail(item.courseOfferingId);}}>Chi tiết lịch dạy</button></td></tr>)}{!loading&&!offeringRows.length&&<tr><td colSpan={5}>Không có môn phù hợp.</td></tr>}</tbody></table></div>
+      {offeringDetail!==null&&<FeatureDialog title="Chi tiết lịch dạy" description={`${detailRows[0]?.courseName||""} · ${detailRows[0]?.classCode||""} · ${detailRows[0]?.semesterName||""}`} onClose={()=>setOfferingDetail(null)}><div className="teacher-tabs" role="tablist" aria-label="Buổi dạy"><button role="tab" aria-selected={detailTab==="upcoming"} onClick={()=>setDetailTab("upcoming")}>Sắp tới ({detailRows.filter(item=>!item.ended).length})</button><button role="tab" aria-selected={detailTab==="ended"} onClick={()=>setDetailTab("ended")}>Đã dạy ({detailRows.filter(item=>item.ended).length})</button></div><div className="feature-table-wrap"><table><thead><tr><th>Ngày / Thứ</th><th>Giờ dạy</th><th>Phòng</th><th>Trạng thái</th></tr></thead><tbody>{visibleDetails.map(item=><tr key={`${item.id}-${item.teachingDate}`}><td>{item.teachingDate?formatTeachingDate(new Date(`${item.teachingDate}T12:00:00+07:00`)):dayLabel(item.dayOfWeek)}</td><td>{timeRange(item)}<small className="table-sub">{item.session}</small></td><td>{item.roomName||"Chưa xếp"}</td><td>{item.ended?"Đã kết thúc":teachingStateLabel(teachingState(item,now))}</td></tr>)}{!visibleDetails.length&&<tr><td colSpan={4}>{detailTab==="ended"?"Chưa có buổi đã dạy.":"Không còn buổi sắp tới."}</td></tr>}</tbody></table></div></FeatureDialog>}
+
     </section>
   </section>;
 }

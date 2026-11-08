@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -37,7 +38,7 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
     (post) => post.slug === postSlug,
   );
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -409,6 +410,7 @@ function PublicWebsiteContent({ onLogin }: { onLogin: () => void }) {
             </div>
             <div>
               <DownloadButton settings={settings} />
+              <p className="download-note"><a href="/huong-dan">Hướng dẫn cài đặt và sử dụng →</a></p>
               {(!settings.downloadEnabled || !settings.downloadUrl) && (
                 <p className="download-note">
                   Liên hệ nhà trường để được hướng dẫn cài đặt.
@@ -491,7 +493,7 @@ function DownloadButton({
     return (
       <a
         className={className}
-        href={compact || hero ? "#tai-ung-dung" : "#lien-he"}>
+        href="/huong-dan">
         <Icon name="download" size={17} />
         {compact || hero ? "Ứng dụng sinh viên" : "Hỗ trợ cài đặt"}
       </a>

@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -18,7 +19,7 @@ export function ProgramManager({token,onToast}:{token:string;onToast:ToastHandle
   const [query,setQuery] = useState("");
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
-  const [error,setError] = useState("");
+  const [error,setError] = useErrorFeedback();
   const dirty=Boolean(draft && JSON.stringify(draft)!==original);
   useEffect(()=>{
     const controller=new AbortController();

@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
 import { useEffect, useState } from "react";
@@ -13,11 +14,13 @@ import {
 import type { MetadataData, Row, ToastHandler } from "@/models/dashboard";
 
 import { TeachingOfferForm, TeachingOfferDetails } from "./TeachingOfferPlan";
+import { FeatureDialog } from "@/components/common/FeatureDialog";
 import { Icon } from "@/components/ui/Icon";
 
 export { WarningPage } from "./WarningPage";
 
 export function NotificationPage({ token, onToast }: { token: string; onToast: ToastHandler }) {
+  const [composeOpen,setComposeOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [recipients, setRecipients] = useState<{ classes: Row[]; cohorts: Row[]; students: Row[]; teachers: Row[] }>({ classes: [], cohorts: [], students: [], teachers: [] });
   const [targetType, setTargetType] = useState("class");
@@ -27,7 +30,7 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
   const [content, setContent] = useState("");
   const [sendNow, setSendNow] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState<Row | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -80,6 +83,7 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
 
       const payload = await apiRequest(token, "/notifications/email", { method: "POST", body: JSON.stringify(body) });
       onToast(payload.message || "Đã tạo thông báo");
+      setComposeOpen(false);
       setSubject(""); setContent(""); setTargetValue(""); setRecipientEmail("");
       await load();
     } catch (err) {
@@ -103,15 +107,16 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
 
   return <section className="feature-page">
     <div className="feature-heading"><div><p className="eyebrow">Quản lý thông báo</p><h1>Thông báo</h1><p>Soạn và gửi thông báo đến sinh viên, giảng viên hoặc nhóm người nhận.</p></div></div>
-    <form className="feature-form" onSubmit={submit}>
+    <button className="primary-button" onClick={()=>setComposeOpen(true)}>Tạo thông báo</button>
+    {composeOpen&&<FeatureDialog className="entity-editor-dialog" title="Tạo thông báo" description="Chọn người nhận và soạn nội dung thông báo." onClose={()=>{if(!busy)setComposeOpen(false);}}>    <form className="feature-form entity-editor-form" onSubmit={submit}><fieldset disabled={busy}>
       <div className="form-grid">
         <label>Đối tượng nhận<select value={targetType} onChange={(e) => changeTargetType(e.target.value)}><option value="class">Theo lớp</option><option value="cohort">Theo khóa</option><option value="student">Một sinh viên</option><option value="teacher">Một giảng viên</option><option value="all_students">Tất cả sinh viên</option><option value="all_teachers">Tất cả giảng viên</option><option value="email">Một email ngoài hệ thống</option></select></label>
         {renderTargetControl()}
         <label>Tiêu đề<input required value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Nhập tiêu đề thông báo" /></label>
         <label className="span-3">Nội dung<textarea required value={content} onChange={(e) => setContent(e.target.value)} placeholder="Nhập nội dung cần gửi..." /></label>
       </div>
-      <div className="form-actions"><label className="check-line"><input type="checkbox" checked={sendNow} onChange={(e) => setSendNow(e.target.checked)} /> Gửi thêm qua email (cần cấu hình SMTP)</label><button className="primary-button" disabled={busy}><Icon name="mail" size={15} />{busy ? "Đang gửi..." : `Gửi cho ${targetCount} người`}</button></div>
-    </form>
+      </fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setComposeOpen(false)}>Hủy bỏ</button><label className="check-line"><input type="checkbox" checked={sendNow} onChange={(e) => setSendNow(e.target.checked)} /> Gửi thêm qua email (cần cấu hình SMTP)</label><button className="primary-button" disabled={busy}><Icon name="mail" size={15} />{busy ? "Đang gửi..." : `Gửi cho ${targetCount} người`}</button></div>
+    </form></FeatureDialog>}
     {error && <div className="feature-error">! {error}</div>}
     <div className="feature-table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Người nhận</th><th>Phạm vi</th><th>Kênh</th><th>Trạng thái</th><th>Thời gian</th><th>Chi tiết</th></tr></thead><tbody>{rows.length === 0 ? <tr><td colSpan={7}>Chưa có thông báo.</td></tr> : rows.map((row) => <tr key={idOf(row)}><td><strong>{display(keyOf(row, "Subject"))}</strong></td><td>{display(pick(row, "RecipientUser.FullName")) !== "—" ? display(pick(row, "RecipientUser.FullName")) : display(keyOf(row, "RecipientEmail"))}</td><td>{notificationTargetLabel(String(keyOf(row, "TargetType")))}</td><td>{display(keyOf(row, "Channel"))}</td><td>{statusLabel(keyOf(row, "Status"))}</td><td>{display(keyOf(row, "CreatedAt"))}</td><td><div className="row-actions"><button type="button" onClick={() => setSelectedNotice(row)}>Xem</button></div></td></tr>)}</tbody></table></div>
     {selectedNotice && <div className="feature-form compact-form"><div className="feature-heading"><div><p className="eyebrow">Nội dung thông báo</p><h2>{display(keyOf(selectedNotice, "Subject"))}</h2><p style={{ whiteSpace: "pre-wrap" }}>{display(keyOf(selectedNotice, "Content"))}</p></div><button type="button" className="refresh-button" onClick={() => setSelectedNotice(null)}>Đóng</button></div></div>}
@@ -125,7 +130,7 @@ function notificationTargetLabel(value: string) {
 
 export function ClassOfferAdminPage({ token, metadata, onToast }: { token: string; metadata: MetadataData; onToast: ToastHandler }) {
   const [rows, setRows] = useState<Row[]>([]);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const load = async () => {
     try { const p = await apiRequest(token, "/class-offers"); setRows(p.data || []); setError(""); }
     catch (e) { setError(e instanceof Error ? e.message : "Unable to load offers"); }

@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -20,7 +21,7 @@ export function LoginScreen({
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [info, setInfo] = useState("");
   const [pending, setPending] = useState<{
     user: AuthUser;
@@ -75,11 +76,7 @@ export function LoginScreen({
           email: username.trim(),
         }),
       });
-      setInfo(
-        data.temp_password
-          ? `Mật khẩu tạm thời: ${data.temp_password}. Đăng nhập bằng mật khẩu này và hệ thống sẽ yêu cầu đổi mật khẩu.`
-          : data.message || "Yêu cầu đặt lại mật khẩu đã được xử lý.",
-      );
+      setInfo(data.message || "Vui lòng liên hệ quản trị viên để xác minh danh tính và được cấp lại mật khẩu.");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Không thể kết nối đến hệ thống. Vui lòng thử lại sau.",
@@ -99,11 +96,12 @@ export function LoginScreen({
       return setError("Mật khẩu xác nhận không khớp.");
     setLoading(true);
     try {
-      await apiRequest(pending.token, "/change-password", {
+      const updated = await apiRequest(pending.token, "/change-password", {
         method: "POST",
         body: JSON.stringify({ new_password: newPassword }),
       });
-      onAuthenticated(pending.user, pending.token, remember);
+      if (!updated.token) throw new Error("Máy chủ không trả phiên đăng nhập mới. Vui lòng đăng nhập lại.");
+      onAuthenticated(pending.user, updated.token, remember);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không đổi được mật khẩu.");
     } finally {
@@ -206,7 +204,7 @@ export function LoginScreen({
                 "Đang đăng nhập..."
               ) : (
                 <>
-                  Đăng nhập <Icon name="arrow" size={16} />
+                  Đăng nhập <Icon name="login" size={18} />
                 </>
               )}
             </button>

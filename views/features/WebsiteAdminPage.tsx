@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -22,7 +23,7 @@ export function WebsiteAdminPage({ token, onToast }: { token: string; onToast: T
   const [draft, setDraft] = useState({ ...emptyPost });
   const [editingId, setEditingId] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
 
   const load = useCallback(async () => {
     try {

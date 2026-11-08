@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
 import { Icon } from "@/components/ui/Icon";
@@ -10,7 +11,7 @@ export function FacultyManager({token,onToast}:{token:string;onToast:ToastHandle
   const [drafts,setDrafts]=useState<Record<number,{biography:string;avatarUrl:string}>>({});
   const [query,setQuery]=useState("");
   const [loading,setLoading]=useState(true);
-  const [error,setError]=useState("");
+  const [error,setError]=useErrorFeedback();
   const [busy,setBusy]=useState(0);
   useEffect(()=>{
     const controller=new AbortController();

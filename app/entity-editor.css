@@ -1,0 +1,18 @@
+.entity-editor-dialog { width: min(920px, calc(100vw - 32px)); }
+.entity-editor-dialog .learning-modal-header { padding: 24px 28px; }
+.entity-editor-dialog .learning-modal-body { padding: 0; }
+.entity-editor-dialog .entity-editor-form { margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: #f8faff; }
+.entity-editor-form > fieldset { min-width: 0; margin: 0; padding: 28px; border: 0; }
+.entity-editor-form .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.entity-editor-form label { min-width: 0; }
+select option:disabled { color: #94a3b8; background: #f1f5f9; }
+.entity-editor-form input, .entity-editor-form select, .entity-editor-form textarea { width: 100%; box-sizing: border-box; background: white; }
+.entity-editor-form .span-3, .entity-editor-form .span-2 { grid-column: 1 / -1; }
+.entity-editor-form > .form-actions { position: sticky; bottom: 0; z-index: 2; margin: 0; padding: 18px 28px; display: flex; justify-content: flex-end; gap: 12px; background: white; border-top: 1px solid #e3e9f4; }
+.entity-editor-form fieldset > .filter-summary { margin: 18px 0 0; }
+@media (max-width: 640px) {
+  .entity-editor-dialog { width: calc(100vw - 20px); }
+  .entity-editor-dialog .learning-modal-header, .entity-editor-form > fieldset { padding: 20px; }
+  .entity-editor-form .form-grid { grid-template-columns: 1fr; gap: 18px; }
+  .entity-editor-form > .form-actions { padding: 16px 20px; }
+}

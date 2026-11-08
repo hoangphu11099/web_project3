@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useEffect, useState } from "react";
@@ -33,7 +34,7 @@ export function WarningPage({ token, metadata, onToast }: { token: string; metad
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [revision, setRevision] = useState(0);
   const [draft, setDraft] = useState<{ all: boolean; rows: Candidate[]; reason: Reason } | null>(null);
 

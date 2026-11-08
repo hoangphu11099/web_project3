@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +21,8 @@ import type { TeachingSchedule } from "@/models/teaching-schedule";
 import { AttendanceQr } from "@/components/common/AttendanceQr";
 import { AttendanceProjection } from "@/components/common/AttendanceProjection";
 import { PanelHeader } from "@/components/common/PanelHeader";
+import { offeringStudyStatus } from "@/controllers/class-schedule";
+import { FeatureDialog } from "@/components/common/FeatureDialog";
 import { Icon } from "@/components/ui/Icon";
 
 import { startAttendancePolling } from "@/controllers/attendance-polling";
@@ -70,6 +73,7 @@ export function AttendanceManager({
 }) {
   const [lessons, setLessons] = useState<TeachingSchedule[]>([]);
   const [sessions, setSessions] = useState<Row[]>([]);
+  const [createOpen,setCreateOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Row | null>(null);
   const [projectionOpen, setProjectionOpen] = useState(false);
   const [records, setRecords] = useState<Row[]>([]);
@@ -77,7 +81,7 @@ export function AttendanceManager({
   const recordsRevision = useRef(0);
   const pendingUpdates = useRef(0);
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const [syncError, setSyncError] = useState("");
+  const [syncError, setSyncError] = useErrorFeedback();
   const [lastSyncedAt, setLastSyncedAt] = useState("");
   const sessionId = selectedSession ? idOf(selectedSession) : 0;
   const sessionActive = selectedSession ? keyOf(selectedSession, "IsActive") !== false : false;
@@ -114,7 +118,7 @@ export function AttendanceManager({
     courseOfferingId: "",
     note: "",
   });
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [ttl, setTtl] = useState(0);
   const [qrCode, setQrCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -198,6 +202,7 @@ export function AttendanceManager({
           note: form.note,
         }),
       });
+      setCreateOpen(false);
       onToast(p.message || "Đã tạo phiên điểm danh");
       const session = p.data as Row;
       setQrCode(p.qrCode || display(keyOf(session, "Code")));
@@ -297,7 +302,7 @@ export function AttendanceManager({
           <p className="empty-note">Không thể tạo phiên điểm danh. Admin cần phân công môn và lịch dạy trước.</p>
         </div>
       ) : (
-        <form className="feature-form" onSubmit={create}>
+        <><button className="primary-button" onClick={()=>setCreateOpen(true)}>Tạo phiên điểm danh</button>{createOpen&&<FeatureDialog className="entity-editor-dialog" title="Tạo phiên điểm danh" description="Chọn tiết dạy hôm nay để bắt đầu điểm danh." onClose={()=>{if(!busy)setCreateOpen(false);}}>        <form className="feature-form entity-editor-form" onSubmit={create}><fieldset disabled={busy}>
           <div className="form-grid">
             <label>
               Tiết dạy hôm nay
@@ -315,11 +320,11 @@ export function AttendanceManager({
             </label>
           </div>
           <p className="empty-note">{attendanceWindowLabel(attendanceState)}</p>
-          <button className="primary-button" disabled={busy || attendanceState !== "open"}>
+          </fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setCreateOpen(false)}>Hủy bỏ</button><button className="primary-button" disabled={busy || attendanceState !== "open"}>
             <Icon name="attendance" size={15} />
             {busy ? "Đang xử lý..." : "Tạo phiên điểm danh"}
           </button>
-        </form>
+        </div></form></FeatureDialog>}</>
       )}
       {error && <div className="feature-error">! {error}</div>}
       <div className="attendance-layout">
@@ -466,9 +471,11 @@ export function ExerciseManager({
   };
   const [rows, setRows] = useState<Row[]>([]);
   const [classes, setClasses] = useState<Row[]>([]);
+  const [exerciseClass,setExerciseClass] = useState("");
+  const [grading,setGrading] = useState<Row|null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ExerciseForm>(emptyForm);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [selected, setSelected] = useState<Row | null>(null);
   const [submissions, setSubmissions] = useState<Row[]>([]);
   const [gradeDrafts, setGradeDrafts] = useState<
@@ -488,7 +495,7 @@ export function ExerciseManager({
         apiRequest(token, "/teacher/classes"),
       ]);
       setRows(e.data || []);
-      setClasses((c.data || []).flatMap((row: Row) => ((keyOf(row,"CourseOfferings") || []) as Row[]).map(offering => ({ ...offering, ClassCode: `${display(keyOf(row,"ClassCode"))} · ${display(pick(offering,"Course.Name"))} · ${display(pick(offering,"Semester.Name"))}` }))));
+      setClasses((c.data || []).flatMap((row: Row) => ((keyOf(row,"CourseOfferings") || []) as Row[]).map(offering => ({ ...offering, ClassID:idOf(row), HomeroomCode:keyOf(row,"ClassCode"), HomeroomStatus:keyOf(row,"Status"), ClassCode: `${display(keyOf(row,"ClassCode"))} · ${display(pick(offering,"Course.Name"))} · ${display(pick(offering,"Semester.Name"))}` }))));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không tải được bài tập");
@@ -497,8 +504,12 @@ export function ExerciseManager({
   useEffect(() => {
     load();
   }, [token]);
+  const endedOffering=(row:Row)=>keyOf(row,"HomeroomStatus")==="closed" || ["closed","completed","finished"].includes(offeringStudyStatus(row,now)) || pick(row,"Semester.Status")==="closed" || (Boolean(pick(row,"Semester.EndDate")) && new Date(String(pick(row,"Semester.EndDate"))).getTime()+86400000<=now);
+  const classChoices=Array.from(new Map(classes.map(row=>[String(keyOf(row,"ClassID")),{id:String(keyOf(row,"ClassID")),code:String(keyOf(row,"HomeroomCode"))}])).values()).map(item=>({...item,ended:classes.filter(row=>String(keyOf(row,"ClassID"))===item.id).every(endedOffering)}));
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(busy)return;
+    if(!classes.some(row=>idOf(row)===Number(form.courseOfferingId)&&String(keyOf(row,"ClassID"))===exerciseClass&&keyOf(row,"Status")==="open"&&!endedOffering(row))) {setError("Vui lòng chọn môn được phân công trong lớp và học kỳ chưa đóng.");return;}
     setBusy(true);
     setError("");
 
@@ -515,7 +526,7 @@ export function ExerciseManager({
       });
 
       onToast(p.message || "Đã tạo bài tập");
-      setForm(emptyForm);
+      setForm(emptyForm);setExerciseClass("");
       setFormOpen(false);
       await load();
     } catch (err) { const message = err instanceof Error ? err.message : "Không tạo được bài tập"; setError(message); onToast(message, "error"); } finally {
@@ -549,13 +560,14 @@ export function ExerciseManager({
   const grade = async (submission: Row) => {
     const id = idOf(submission);
     const d = gradeDrafts[id];
-    if (!d || d.score === "") return setError("Nhập điểm trước khi lưu.");
+    if (!d || d.score === "" || !Number.isFinite(Number(d.score)) || Number(d.score)<0 || Number(d.score)>100) return setError("Nhập điểm trước khi lưu.");
     setBusy(true);
     try {
       const p = await apiRequest(token, `/submissions/${id}/grade`, {
         method: "PUT",
         body: JSON.stringify({ score: Number(d.score), feedback: d.feedback, submittedAt: keyOf(submission, "SubmittedAt") }),
       });
+      setGrading(null);
       onToast(p.message || "Đã chấm bài");
       if (selected) viewSubmissions(selected);
     } catch (e) { const message = e instanceof Error ? e.message : "Không chấm được bài"; setError(message); onToast(message, "error"); } finally {
@@ -586,22 +598,25 @@ export function ExerciseManager({
         </button>
       </div>
       {formOpen && (
-        <form className="feature-form" onSubmit={create}>
+        <FeatureDialog className="entity-editor-dialog" title="Tạo bài tập" onClose={()=>{if(!busy)setFormOpen(false);}}><form className="feature-form entity-editor-form" onSubmit={create}><fieldset disabled={busy}>
           <div className="form-grid">
+            <label>Lớp học<select required value={exerciseClass} onChange={event=>{setExerciseClass(event.target.value);setForm(current=>({...current,courseOfferingId:""}));}}><option value="">Chọn lớp đang dạy</option>{classChoices.map(item=><option key={item.id} value={item.id} disabled={item.ended}>{item.code}{item.ended?" · Đã kết thúc":""}</option>)}</select></label>
             <label>
-              Học phần
+              Môn đang phụ trách
               <select
                 required
+                disabled={!exerciseClass}
                 value={form.courseOfferingId}
                 onChange={(e) => setForm({ ...form, courseOfferingId: e.target.value })}>
                 <option value="">Chọn học phần</option>
-                {classes.map((row) => (
-                  <option key={idOf(row)} value={idOf(row)}>
-                    {display(keyOf(row, "ClassCode"))}
+                {classes.filter(row=>String(keyOf(row,"ClassID"))===exerciseClass).map((row) => (
+                  <option key={idOf(row)} value={idOf(row)} disabled={keyOf(row,"Status")!=="open"||endedOffering(row)}>
+                    {display(pick(row,"Course.Name"))} · {display(pick(row,"Semester.Name"))}{keyOf(row,"Status")!=="open"||endedOffering(row)?" · Đã đóng":""}
                   </option>
                 ))}
               </select>
             </label>
+            {!!form.courseOfferingId&&<label>Giảng viên phụ trách<input readOnly value={String(pick(classes.find(row=>idOf(row)===Number(form.courseOfferingId)),"Teacher.User.FullName")||"Giảng viên đang đăng nhập")}/></label>}
             <label>
               Tên bài tập
               <input
@@ -638,11 +653,41 @@ export function ExerciseManager({
               />
             </label>
           </div>
-          <button className="primary-button" disabled={busy}>
+          </fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setFormOpen(false)}>Hủy bỏ</button><button className="primary-button" disabled={busy}>
             {busy ? "Đang lưu..." : "Lưu bài tập"}
           </button>
-        </form>
+          </div></form></FeatureDialog>
       )}
+      {grading&&<FeatureDialog className="entity-editor-dialog" title="Chấm bài nộp" description={String(pick(grading,"Student.User.FullName")||"")} onClose={()=>{if(!busy)setGrading(null);}}><form className="feature-form entity-editor-form" onSubmit={event=>{event.preventDefault();if(!busy)void grade(grading);}}><fieldset disabled={busy}><p><strong>{display(keyOf(selected,"Title"))}</strong></p><p>{display(keyOf(grading,"Content"))}</p>{!!keyOf(grading,"FileURL")&&<a href={String(keyOf(grading,"FileURL"))} target="_blank" rel="noreferrer">Mở file bài nộp</a>}{(()=>{const id=idOf(grading);const d=gradeDrafts[id]||{score:"",feedback:""};return <div className="form-grid">                    <label>
+                      Điểm
+                      <input
+                        type="number"
+                        required
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={d.score}
+                        onChange={(e) =>
+                          setGradeDrafts({
+                            ...gradeDrafts,
+                            [id]: { ...d, score: e.target.value },
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Phản hồi
+                      <input
+                        value={d.feedback}
+                        onChange={(e) =>
+                          setGradeDrafts({
+                            ...gradeDrafts,
+                            [id]: { ...d, feedback: e.target.value },
+                          })
+                        }
+                      />
+                    </label>
+</div>;})()}</fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setGrading(null)}>Hủy bỏ</button><button type="submit" className="primary-button" disabled={busy}>{busy?"Đang lưu…":"Lưu điểm"}</button></div></form></FeatureDialog>}
       {error && <div className="feature-error">! {error}</div>}
       {availability && <form className="feature-form" onSubmit={event => { event.preventDefault(); void updateAvailability(availability, "open"); }}><h2>Mở lại / gia hạn: {display(keyOf(availability, "Title"))}</h2><label>Hạn nộp mới<input type="datetime-local" required value={newDeadline} onChange={event => setNewDeadline(event.target.value)} /></label><p>Đến hạn mới, hệ thống tự khóa nộp bài.</p><div className="form-actions"><button className="primary-button" disabled={busy}>Mở nhận bài</button><button type="button" className="refresh-button" onClick={() => setAvailability(null)}>Hủy</button></div></form>}
       <button className="refresh-button" onClick={load}>Làm mới bài tập</button>
@@ -703,7 +748,6 @@ export function ExerciseManager({
             ) : (
               submissions.map((submission) => {
                 const id = idOf(submission);
-                const d = gradeDrafts[id] || { score: "", feedback: "" };
                 return (
                   <div className="submission-grade" key={id}>
                     <div>
@@ -724,36 +768,7 @@ export function ExerciseManager({
                         </a>
                       )}
                     </div>
-                    <label>
-                      Điểm
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={d.score}
-                        onChange={(e) =>
-                          setGradeDrafts({
-                            ...gradeDrafts,
-                            [id]: { ...d, score: e.target.value },
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Phản hồi
-                      <input
-                        value={d.feedback}
-                        onChange={(e) =>
-                          setGradeDrafts({
-                            ...gradeDrafts,
-                            [id]: { ...d, feedback: e.target.value },
-                          })
-                        }
-                      />
-                    </label>
-                    <button disabled={busy} onClick={() => grade(submission)}>
-                      Lưu điểm
-                    </button>
+                    <button disabled={busy} onClick={()=>setGrading(submission)}>{keyOf(submission,"Status")==="graded"?"Xem / sửa điểm":"Chấm điểm"}</button>
                   </div>
                 );
               })

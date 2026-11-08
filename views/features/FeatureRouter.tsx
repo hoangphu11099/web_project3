@@ -1,5 +1,6 @@
 import { ProfilePage } from "./ProfilePage";
 import { CourseRegistrationsPage } from "./CourseRegistrationsPage";
+import { CourseOfferingsPage } from "./CourseOfferingsPage";
 import { TeacherClassesPage } from "./TeacherClassesPage";
 import { entityConfigs, type MetadataData, type Role, type ToastHandler } from "@/models/dashboard";
 import { EntityPage } from "./EntityPage";
@@ -11,6 +12,7 @@ import { TeacherSchedulePage } from "./TeacherSchedulePage";
 import { WebsiteAdminPage } from "./WebsiteAdminPage";
 
 export function FeatureRouter({ role, active, token, metadata, onToast, onNavigate, onProfileUpdated }: { role: Role; active: string; token: string; metadata: MetadataData; onToast: ToastHandler; onNavigate: (value: string) => void; onProfileUpdated:(name:string)=>void }) {
+  if (active === "Học phần" && role === "admin") return <CourseOfferingsPage token={token} metadata={metadata} />;
   if (active === "Đăng ký học phần" && role === "admin") return <CourseRegistrationsPage token={token} metadata={metadata} onToast={onToast} />;
   if (active === "Hồ sơ cá nhân") return <ProfilePage token={token} onToast={onToast} onUpdated={onProfileUpdated} />;
   if (active === "Lớp của tôi") return <TeacherClassesPage token={token} />;
@@ -24,6 +26,6 @@ export function FeatureRouter({ role, active, token, metadata, onToast, onNaviga
   if (active === "Bảng điểm") return <GradeManager token={token} onToast={onToast} />;
   if (active === "Bài tập") return <ExerciseManager token={token} onToast={onToast} />;
   if (active === "Đề xuất lớp") return <TeacherOffers token={token} onToast={onToast} />;
-  if (active === "Báo cáo") return <ReportPage role={role} token={token} onToast={onToast} />;
+  if (active === "Báo cáo") return <ReportPage role={role} token={token} onToast={onToast} metadata={metadata} />;
   return <section className="feature-page"><h1>{active}</h1><p>Chức năng chưa được định nghĩa.</p></section>;
 }

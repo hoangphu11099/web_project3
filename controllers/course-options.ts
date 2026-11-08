@@ -9,6 +9,6 @@ export function coursesForClass(courses: Row[], classroom?: Row): Row[] {
 
 export function changeDependentField(form: Record<string, string>, key: string, value: string) {
   const next = { ...form, [key]: value };
-  if (form[key] !== value && (key === "classId" || key === "majorId")) next.courseId = "";
+  if (form[key] !== value && (key === "classId" || key === "majorId" || key === "semesterId")) next.courseId = "";
   return next;
 }

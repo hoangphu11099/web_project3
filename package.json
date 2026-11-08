@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vinext build",
     "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/teaching-dates.test.mjs tests/attendance-polling.test.mjs tests/course-options.test.mjs tests/class-schedule.test.mjs tests/learning-summary.test.mjs",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs tests/teaching-dates.test.mjs tests/attendance-polling.test.mjs tests/course-options.test.mjs tests/class-schedule.test.mjs tests/learning-summary.test.mjs tests/report-export.test.mjs tests/student-options.test.mjs",
     "validate:artifact": "node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"

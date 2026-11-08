@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import { apiRequest, display, keyOf, pick } from "@/controllers/api.controller";
 import type { Role, Row } from "@/models/dashboard";
 import { Icon } from "@/components/ui/Icon";
+import { useErrorReporter } from "@/components/common/ErrorFeedback";
 
 export function GlobalSearch({ role, token, onNavigate }: { role: Role; token: string; onNavigate: (value: string) => void }) {
+  const reportError = useErrorReporter();
   const [query, setQuery] = useState(""); const [results, setResults] = useState<{ title: string; sub: string; target: string }[]>([]); const [busy, setBusy] = useState(false);
   useEffect(() => {
     const value = query.trim();
@@ -30,9 +32,9 @@ export function GlobalSearch({ role, token, onNavigate }: { role: Role; token: s
           for (const row of (offers.data || []) as Row[]) if (JSON.stringify(row).toLowerCase().includes(lower)) out.push({ title: display(pick(row, "Class.ClassCode")), sub: "Đề xuất lớp", target: "Đề xuất lớp" });
           setResults(out.slice(0, 10));
         }
-      } catch { setResults([]); } finally { setBusy(false); }
+      } catch (error) { setResults([]); reportError(error instanceof Error ? error.message : "Không tìm kiếm được dữ liệu"); } finally { setBusy(false); }
     }, 320);
     return () => clearTimeout(timer);
-  }, [query, role, token]);
+  }, [query, role, token, reportError]);
   return <div className="global-search"><label className="search"><Icon name="search" size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm sinh viên, lớp, môn học..." /></label>{query.trim().length >= 2 && <div className="search-results">{busy ? <p>Đang tìm...</p> : results.length === 0 ? <p>Không có kết quả.</p> : results.map((item, index) => <button key={`${item.title}-${index}`} onClick={() => { onNavigate(item.target); setQuery(""); setResults([]); }}><strong>{item.title}</strong><small>{item.sub}</small></button>)}</div>}</div>;
 }

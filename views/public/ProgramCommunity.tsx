@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -10,7 +11,7 @@ import type { SchoolPost, SiteSettings } from "@/models/publicWebsite";
 export function ConsultationForm({ program, settings }: { program: Program; settings: SiteSettings }) {
   const [form, setForm] = useState({fullName:"",phone:"",email:"",location:"",preferredSession:"",message:"",consent:false,website:""});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorFeedback();
   const [success, setSuccess] = useState("");
   const change = (key: string, value: string | boolean) => setForm(current => ({...current,[key]:value}));
   const submit = async (event: React.FormEvent) => {

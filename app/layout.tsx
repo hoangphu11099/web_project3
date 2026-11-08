@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import { ErrorFeedbackProvider } from "@/components/common/ErrorFeedback";
 import "./globals.css";
 import "./forms.css";
 import "./school.css";
 import "./overview.css";
 import "./programs.css";
+import "./reports.css";
+import "./class-student-picker.css";
+import "./student-editor.css";
+import "./entity-editor.css";
 
 export const metadata: Metadata = {
   title: "PP Academy — Thông tin nhà trường",
@@ -28,7 +33,7 @@ export default function RootLayout({
       <head>
         <link rel="preload" href="/fonts/kripa/Kripa-Variable.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />
       </head>
-      <body>{children}</body>
+      <body><ErrorFeedbackProvider>{children}</ErrorFeedbackProvider></body>
     </html>
   );
 }

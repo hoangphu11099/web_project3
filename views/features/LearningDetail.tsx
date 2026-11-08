@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useRef, useState } from "react";
 import { apiRequest, display, idOf, keyOf, pick, statusLabel } from "@/controllers/api.controller";
 import { attendanceSummary, gradeSummary, outstandingCourses } from "@/controllers/learning-summary";
@@ -20,7 +21,7 @@ export function LearningDetail({ token, student, classRow, onClose }: {token: st
  useEffect(() => { const timer=window.setInterval(() => setNow(Date.now()),30000); return () => window.clearInterval(timer); }, []);
  const [resultFilter,setResultFilter] = useState("");
  const [rows,setRows] = useState<Row[]>([]);
- const [error,setError] = useState("");
+ const [error,setError] = useErrorFeedback();
  const [loading,setLoading] = useState(true);
  const [query,setQuery] = useState("");
  useEffect(() => {

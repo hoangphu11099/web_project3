@@ -1,4 +1,5 @@
 "use client";
+import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useEffect, useRef, useState } from "react";
 import { display, keyOf, pick } from "@/controllers/api.controller";
@@ -12,7 +13,7 @@ export function AttendanceProjection({ session, records, code, ttl, active, sync
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
-  const [fullscreenError, setFullscreenError] = useState("");
+  const [fullscreenError, setFullscreenError] = useErrorFeedback();
   useEffect(() => {
     const dialog = dialogRef.current;
     const overflow = document.body.style.overflow;

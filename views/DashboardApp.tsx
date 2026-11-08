@@ -27,6 +27,7 @@ import { DashboardHome } from "@/views/dashboard/DashboardHome";
 import { FeatureRouter } from "@/views/features/FeatureRouter";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { useErrorReporter } from "@/components/common/ErrorFeedback";
 
 const adminNav: [string, IconName][] = [
   ["Tổng quan", "home"],
@@ -60,6 +61,7 @@ const teacherNav: [string, IconName][] = [
 ];
 
 export function DashboardApp() {
+  const reportError = useErrorReporter();
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState("");
   const [authReady, setAuthReady] = useState(false);
@@ -76,6 +78,17 @@ export function DashboardApp() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
   const role: Role = authUser?.role === "teacher" ? "teacher" : "admin";
+  useEffect(() => {
+    const invalidate = (event: Event) => {
+      const detail = (event as CustomEvent<{token:string;message:string}>).detail;
+      if (!token || detail?.token !== token) return;
+      clearSession(); setToken(""); setAuthUser(null); setShowLogin(true);
+      setMetadata(emptyMetadata); setStats({}); setNotifications([]); setActive("Tổng quan");
+      reportError(detail.message);
+    };
+    window.addEventListener("pp-auth-invalid",invalidate);
+    return () => window.removeEventListener("pp-auth-invalid",invalidate);
+  }, [token,reportError]);
   const nav = role === "admin" ? adminNav : teacherNav;
   const today = useMemo(
     () =>
@@ -115,18 +128,19 @@ export function DashboardApp() {
         );
         setApiOnline(true);
       })
-      .catch(() => setApiOnline(false));
-  }, [token, authUser, role]);
+      .catch(error => { setApiOnline(false); reportError(error instanceof Error ? error.message : "Không tải được dữ liệu dashboard"); });
+  }, [token, authUser, role, reportError]);
 
   const act = (message: string, tone: "success" | "error" = "success") => {
+    if (tone === "error") { reportError(message); return; }
     setToast(message);
     setToastTone(tone);
-    if (token && tone === "success")
+    if (token && readSession()?.token === token && tone === "success")
       apiRequest(token, "/metadata")
         .then((meta) => setMetadata({ ...emptyMetadata, ...(meta.data || {}) }))
-        .catch(() => setApiOnline(false));
+        .catch(error => { setApiOnline(false); reportError(error instanceof Error ? error.message : "Không làm mới được dữ liệu"); });
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), tone === "error" ? 6000 : 4500);
+    toastTimer.current = setTimeout(() => setToast(""), 4500);
   };
   const handleAuthenticated = (
     user: AuthUser,
@@ -163,7 +177,7 @@ export function DashboardApp() {
         Array.isArray(payload.data) ? payload.data.slice(0, 6) : [],
       );
     } catch (error) {
-      act(error instanceof Error ? error.message : "Không tải được thông báo");
+      act(error instanceof Error ? error.message : "Không tải được thông báo", "error");
     }
   };
 
