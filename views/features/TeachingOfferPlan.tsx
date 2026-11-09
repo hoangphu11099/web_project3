@@ -1,4 +1,8 @@
 "use client";
+import { PaginatedItems } from "@/components/common/Pagination";
+
+import { PaginatedTable } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useRef, useState } from "react";
 import { FeatureDialog } from "@/components/common/FeatureDialog";
@@ -7,6 +11,14 @@ import { coursesForClass } from "@/controllers/course-options";
 import { dayLabel } from "@/controllers/teaching-schedule.controller";
 import { assignmentConflicts, weekdaysForStartDate, weeklyTeachingDates } from "@/controllers/class-schedule";
 import type { MetadataData, Row, ToastHandler } from "@/models/dashboard";
+
+export function TeachingOfferDialog({ onClose, ...props }: { token: string; metadata: MetadataData; onToast: ToastHandler; initialClass?: Row; initialTeacher?: Row; onSent: (offer: Row) => void; onClose: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const close = () => { if (!busy) onClose(); };
+  return <FeatureDialog className="entity-editor-dialog teaching-offer-dialog" title="Phân công lịch học" description="Chọn lớp, giảng viên và lập kế hoạch các buổi học trước khi gửi phân công." onClose={close}>
+    <TeachingOfferForm {...props} onCancel={close} onBusyChange={setBusy} />
+  </FeatureDialog>;
+}
 
 export function offerSchedules(row: Row): Row[] {
   try { const plan = JSON.parse(String(keyOf(row, "PlanJSON") || "{}")); return Array.isArray(plan.schedules) ? plan.schedules : []; }
@@ -35,7 +47,7 @@ export function TeachingOfferDetails({ row }: { row: Row }) {
       <div><dt>Bắt đầu dự kiến</dt><dd>{dateText(dates[0])}</dd></div>
       <div><dt>Kết thúc dự kiến</dt><dd>{dateText(dates[dates.length - 1])}</dd></div>
     </dl>
-    <details><summary>Xem lịch từng buổi ({schedules.length} buổi)</summary><div className="feature-table-wrap"><table><thead><tr><th>Buổi</th><th>Ngày dạy</th><th>Thứ</th><th>Ca</th><th>Thời gian</th></tr></thead><tbody>{schedules.map((s, index) => <tr key={index}><td>{index + 1}</td><td>{dateText(keyOf(s, "FullDate"))}</td><td>{dayLabel(String(keyOf(s, "DayOfWeek")))}</td><td>{display(keyOf(s, "Session"))}</td><td>{display(keyOf(s, "StartTime"))} – {display(keyOf(s, "EndTime"))}</td></tr>)}</tbody></table></div></details>
+    <details><summary>Xem lịch từng buổi ({schedules.length} buổi)</summary><div className="feature-table-wrap"><PaginatedTable><thead><tr><th>Buổi</th><th>Ngày dạy</th><th>Thứ</th><th>Ca</th><th>Thời gian</th></tr></thead><tbody>{schedules.map((s, index) => <tr key={index}><td>{index + 1}</td><td>{dateText(keyOf(s, "FullDate"))}</td><td>{dayLabel(String(keyOf(s, "DayOfWeek")))}</td><td>{display(keyOf(s, "Session"))}</td><td>{display(keyOf(s, "StartTime"))} – {display(keyOf(s, "EndTime"))}</td></tr>)}</tbody></PaginatedTable></div></details>
   </div>;
 }
 
@@ -43,7 +55,7 @@ function schoolToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
-export function TeachingOfferForm({ token, metadata, onToast, initialClass, initialTeacher, onSent, onCancel }: { token: string; metadata: MetadataData; onToast: ToastHandler; initialClass?: Row; initialTeacher?: Row; onSent?: () => void; onCancel?: () => void }) {
+export function TeachingOfferForm({ token, metadata, onToast, initialClass, initialTeacher, onSent, onCancel, onBusyChange }: { token: string; metadata: MetadataData; onToast: ToastHandler; initialClass?: Row; initialTeacher?: Row; onSent?: (offer: Row) => void; onCancel?: () => void; onBusyChange?: (busy: boolean) => void }) {
   const [classId, setClassId] = useState(initialClass ? String(idOf(initialClass)) : "");
   const [courseId, setCourseId] = useState("");
   const [semesterId, setSemesterId] = useState("");
@@ -178,13 +190,13 @@ export function TeachingOfferForm({ token, metadata, onToast, initialClass, init
     if (dates.some(d => Date.parse(`${d}T${startTime}+07:00`) <= Date.now())) { setError("Không được phân công buổi dạy đã qua hoặc đã đến giờ bắt đầu, kể cả khi tạo ngoại lệ."); return; }
     if (new Set(dates).size !== dates.length) { setError("Danh sách ngày dạy đang bị trùng"); return; }
     if (startTime >= endTime) { setError("Giờ kết thúc phải sau giờ bắt đầu"); return; }
-    setBusy(true); setError("");
+    setBusy(true); onBusyChange?.(true); setError("");
     try {
       const payload = await apiRequest(token, "/class-offers", { method: "POST", body: JSON.stringify({ classId: Number(classId), teacherId: Number(teacherId), courseId: Number(courseId), semesterId: Number(semesterId), roomId: Number(roomId), title: title.trim(), content: content.trim(), teachingDates: dates, session, startTime, endTime, urgentException: exceptionReason !== null, exceptionReason: exceptionReason || "" }) });
       onToast(payload.message || "Đã gửi kế hoạch giảng dạy", "success");
-      setDates([]); setStartDate(""); setTitle(null); setContent(null); setExceptionReason(null); setExceptionDraft(""); onSent?.();
+      setDates([]); setStartDate(""); setTitle(null); setContent(null); setExceptionReason(null); setExceptionDraft(""); onSent?.({ ...payload.data, Class: selectedClass, Teacher: metadata.teachers.find(t => String(idOf(t)) === teacherId), Course: courses.find(c => String(idOf(c)) === courseId), Semester: metadata.semesters.find(s => String(idOf(s)) === semesterId), Room: metadata.rooms.find(r => String(idOf(r)) === roomId) });
     } catch (err) { const message = err instanceof Error ? err.message : "Không gửi được đề xuất"; setError(message); onToast(message, "error"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); onBusyChange?.(false); }
   };
   return <form className="feature-form teaching-offer-form" onSubmit={submit}>
     {initialTeacher && !Number(keyOf(initialTeacher,"MajorID")) && <p className="feature-error">Giảng viên chưa có ngành dạy. Vui lòng cập nhật ngành trong hồ sơ trước khi phân công.</p>}
@@ -201,15 +213,15 @@ export function TeachingOfferForm({ token, metadata, onToast, initialClass, init
     </div>
     {conflictDialog && ready && <FeatureDialog className="assignment-conflict-dialog" title={`${dialogKind === "TeacherID" ? "Giáo viên" : "Phòng học"} trùng lịch: ${dialogName}`} description="Chọn cách xử lý bên dưới để tiếp tục phân công." onClose={() => setConflictDialog(null)}>
       <div className="conflict-alert"><span aria-hidden="true">!</span><div><strong>Có {conflictsFor(dialogKind, dialogId).length} buổi bị trùng lịch</strong><p>{dialogName} đã có lịch trong các khung giờ dưới đây.</p></div></div>
-      <div className="feature-table-wrap conflict-busy-table"><table><thead><tr><th>Ngày</th><th>Giờ bận</th><th>Lớp / Môn</th><th>Phòng</th></tr></thead><tbody>{conflictsFor(dialogKind, dialogId).map((l,i) => <tr key={i}><td>{dateText(l.date)}</td><td><span className="conflict-time-badge">{l.startTime.slice(0,5)} – {l.endTime.slice(0,5)}</span></td><td><strong>{display(pick(l.offering,"Class.ClassCode"))}</strong><small>{display(pick(l.offering,"Course.Name"))}</small></td><td>{display(pick(l.offering,"Room.Name"))}</td></tr>)}</tbody></table></div>
+      <div className="feature-table-wrap conflict-busy-table"><PaginatedTable><thead><tr><th>Ngày</th><th>Giờ bận</th><th>Lớp / Môn</th><th>Phòng</th></tr></thead><tbody>{conflictsFor(dialogKind, dialogId).map((l,i) => <tr key={i}><td>{dateText(l.date)}</td><td><span className="conflict-time-badge">{l.startTime.slice(0,5)} – {l.endTime.slice(0,5)}</span></td><td><strong>{display(pick(l.offering,"Class.ClassCode"))}</strong><small>{display(pick(l.offering,"Course.Name"))}</small></td><td>{display(pick(l.offering,"Room.Name"))}</td></tr>)}</tbody></PaginatedTable></div>
       <div className="conflict-resolution"><h3>Bạn muốn xử lý thế nào?</h3><div className="conflict-resolution-actions"><button type="button" aria-pressed={conflictDialog.mode === "replace"} onClick={() => setConflictDialog({kind: dialogKind, mode:"replace"})}><strong>Đổi {dialogKind === "TeacherID" ? "giáo viên" : "phòng học"} khác</strong><span>Giữ nguyên ngày và giờ đang chọn</span></button><button type="button" aria-pressed={conflictDialog.mode === "schedule"} onClick={() => setConflictDialog({kind: dialogKind, mode:"schedule"})}><strong>Giữ {dialogKind === "TeacherID" ? "giáo viên" : "phòng học"}, đổi lịch</strong><span>Tìm ngày, giờ trống cho {dialogName}</span></button></div></div>
-      {conflictDialog.mode === "replace" && <section aria-label="Danh sách còn trống"><h3>{dialogKind === "TeacherID" ? "Giáo viên" : "Phòng học"} còn trống toàn bộ lịch dự kiến</h3>{!replacements.length && <p>Không có lựa chọn còn trống. Hãy đổi ngày/giờ.</p>}<div className="conflict-choice-list">{replacements.map(r => <button type="button" className="refresh-button" key={idOf(r)} onClick={() => { chooseResource(dialogKind, String(idOf(r))); setConflictDialog(null); }}>{display(dialogKind === "TeacherID" ? pick(r,"User.FullName") : keyOf(r,"Name"))} · Chọn</button>)}</div></section>}
-      {conflictDialog.mode === "schedule" && <section className="conflict-suggestions" aria-label="Lịch đề xuất"><h3>Lịch trống cho {dialogName}</h3><p className="conflict-section-description">Đã kiểm tra lịch lớp, giáo viên và phòng. Chọn một phương án để cập nhật toàn bộ {previewDates.length} buổi mới; lịch đã có giữ nguyên.</p><div className="conflict-schedule-list">{alternatives(dialogId, dialogKind).map((s,i) => <article className="conflict-schedule-card" key={i}>
+      {conflictDialog.mode === "replace" && <section aria-label="Danh sách còn trống"><h3>{dialogKind === "TeacherID" ? "Giáo viên" : "Phòng học"} còn trống toàn bộ lịch dự kiến</h3>{!replacements.length && <p>Không có lựa chọn còn trống. Hãy đổi ngày/giờ.</p>}<div className="conflict-choice-list">{(<PaginatedItems>{replacements.map(r => <button type="button" className="refresh-button" key={idOf(r)} onClick={() => { chooseResource(dialogKind, String(idOf(r))); setConflictDialog(null); }}>{display(dialogKind === "TeacherID" ? pick(r,"User.FullName") : keyOf(r,"Name"))} · Chọn</button>)}</PaginatedItems>)}</div></section>}
+      {conflictDialog.mode === "schedule" && <section className="conflict-suggestions" aria-label="Lịch đề xuất"><h3>Lịch trống cho {dialogName}</h3><p className="conflict-section-description">Đã kiểm tra lịch lớp, giáo viên và phòng. Chọn một phương án để cập nhật toàn bộ {previewDates.length} buổi mới; lịch đã có giữ nguyên.</p><div className="conflict-schedule-list">{(<PaginatedItems>{alternatives(dialogId, dialogKind).map((s,i) => <article className="conflict-schedule-card" key={i}>
         <header><span className="conflict-option-number">Phương án {i+1}</span><span className="conflict-available-badge">Không trùng lịch</span></header>
         <h4>{s.dates[0] === previewDates[0] ? "Giữ ngày học · Đổi giờ" : "Đổi ngày học"}</h4><p className="conflict-change-description">{s.label}</p>
         <dl className="conflict-date-comparison">{[{ label: "Giờ học", before: `${startTime} – ${endTime}`, after: `${s.start} – ${s.end}` }, { label: "Buổi đầu", before: dateText(previewDates[0]), after: dateText(s.dates[0]) }, { label: "Buổi cuối", before: dateText(previewDates[previewDates.length-1]), after: dateText(s.dates[s.dates.length-1]) }].map(row => <div key={row.label}><dt>{row.label}</dt><dd><span className="conflict-old-value">{row.before}</span><span className="conflict-comparison-arrow" aria-label="chuyển sang">→</span><strong>{row.after}</strong></dd></div>)}</dl>
         <footer><span>{s.dates.length} buổi học</span><button type="button" className="primary-button" aria-label={`Áp dụng phương án ${i+1}`} onClick={() => { setDates(s.dates); setStartDate(s.dates[0]); setWeekdays([...new Set(s.dates.map(d => new Date(`${d}T12:00:00Z`).getUTCDay()))]); setStartTime(s.start); setEndTime(s.end); setSession(s.start < "12:00" ? "Sáng" : s.start < "18:00" ? "Chiều" : "Tối"); setConflictDialog(null); }}>Áp dụng lịch này <span aria-hidden="true">→</span></button></footer>
-      </article>)}</div>{!alternatives(dialogId, dialogKind).length && <p className="conflict-empty">Chưa tìm thấy lịch phù hợp trong 7 ngày tiếp theo. Hãy đổi khoảng ngày, số buổi hoặc lựa chọn còn lại.</p>}</section>}
+      </article>)}</PaginatedItems>)}</div>{!alternatives(dialogId, dialogKind).length && <p className="conflict-empty">Chưa tìm thấy lịch phù hợp trong 7 ngày tiếp theo. Hãy đổi khoảng ngày, số buổi hoặc lựa chọn còn lại.</p>}</section>}
     </FeatureDialog>}
     {ready && (teacherConflicts.length > 0 || roomConflicts.length > 0) && <div className="form-actions">{teacherConflicts.length > 0 && <button type="button" className="refresh-button" onClick={() => setConflictDialog({kind:"TeacherID",mode:"reason"})}>Xử lý trùng lịch giáo viên</button>}{roomConflicts.length > 0 && <button type="button" className="refresh-button" onClick={() => setConflictDialog({kind:"RoomID",mode:"reason"})}>Xử lý trùng lịch phòng</button>}</div>}
     {exceptionOpen && <FeatureDialog title="Tạo ngoại lệ phân công cấp bách" description="Cho phép gửi lời mời trước buổi dạy dưới 7 ngày. Giảng viên vẫn cần chấp nhận; lịch trong quá khứ và trùng lịch vẫn bị chặn." onClose={() => setExceptionOpen(false)}><div className="offer-exception-form"><label>Lý do cấp bách<textarea maxLength={1000} rows={4} value={exceptionDraft} onChange={e => setExceptionDraft(e.target.value)} placeholder="Nêu rõ tình huống cần phân công gấp…" /></label><p>Lý do sẽ được lưu cùng lời mời và hiển thị cho giảng viên.</p><div className="form-actions"><button type="button" className="refresh-button" onClick={() => setExceptionOpen(false)}>Hủy</button><button type="button" className="primary-button" disabled={!exceptionDraft.trim()} onClick={() => { setExceptionReason(exceptionDraft.trim()); setExceptionOpen(false); }}>Xác nhận ngoại lệ</button></div></div></FeatureDialog>}
@@ -219,11 +231,11 @@ export function TeachingOfferForm({ token, metadata, onToast, initialClass, init
       <label>Ngày bắt đầu<input type="date" min={minDate} max={maxDate} value={startDate} onChange={e => { const value = e.target.value; setWeekdays(current => weekdaysForStartDate(current, startDate, value)); setStartDate(value); setDates([]); }} /></label>
       <label>Số buổi cần thêm<input type="number" min={1} max={120} value={count} onChange={e => { setCount(Number(e.target.value)); setDates([]); }} /></label>
     </div><fieldset className="weekly-day-picker"><legend>Ngày học cố định hằng tuần</legend><div>{[1,2,3,4,5,6,0].map(day => <label key={day}><input type="checkbox" checked={weekdays.includes(day)} onChange={e => { setWeekdays(current => e.target.checked ? [...current,day] : current.filter(d => d !== day)); setDates([]); }} />{day === 0 ? "Chủ nhật" : `Thứ ${day+1}`}</label>)}</div><p>Chọn một hoặc nhiều thứ, ví dụ thứ 2, 4, 6. Lịch lặp hằng tuần từ ngày bắt đầu đến khi đủ số buổi; có thể sửa từng ngày sau khi tạo.</p></fieldset><button type="button" className="refresh-button" onClick={generate}>Tạo danh sách ngày</button>
-    <div className="offer-date-list">{dates.map((date, i) => <label key={i}>Buổi {i+1}<input type="date" required min={minDate} max={maxDate} value={date} onChange={e => setDates(current => current.map((d,index) => index === i ? e.target.value : d))} /><button type="button" onClick={() => setDates(current => current.filter((_,index) => index !== i))} aria-label={`Bỏ buổi ${i+1}`}>Bỏ</button></label>)}</div>
+    <div className="offer-date-list">{(<PaginatedItems>{dates.map((date, i) => <label key={i}>Buổi {i+1}<input type="date" required min={minDate} max={maxDate} value={date} onChange={e => setDates(current => current.map((d,index) => index === i ? e.target.value : d))} /><button type="button" onClick={() => setDates(current => current.filter((_,index) => index !== i))} aria-label={`Bỏ buổi ${i+1}`}>Bỏ</button></label>)}</PaginatedItems>)}</div>
     </fieldset>
     {existing && <p className="offer-plan-note">Học phần đã tồn tại. Đề xuất sẽ chuyển môn này cho giảng viên được chọn; {retained.length} buổi cũ ngoài các ngày sửa được giữ nguyên. Giáo viên sẽ thấy toàn bộ lịch trước khi nhận.</p>}
     {allDates.length > 0 && <div className="offer-plan-preview"><strong>Tổng dự kiến: {allDates.length} buổi</strong><span>Bắt đầu: {dateText(allDates[0])}</span><span>Kết thúc: {dateText(allDates[allDates.length-1])}</span><span>Lịch mới: {startTime} – {endTime} · {session}</span></div>}
     <div className="form-grid"><label>Tiêu đề đề xuất<input maxLength={255} value={title} onChange={e => setTitle(e.target.value)} /></label><label className="span-3">Lời nhắn cho giảng viên<textarea value={content} onChange={e => setContent(e.target.value)} rows={12} /></label></div>
-    <div className="form-actions">{onCancel && <button type="button" className="refresh-button" onClick={onCancel}>Đóng</button>}<button className="primary-button" disabled={busy || !dates.length || !ready || blocked}>{busy ? "Đang gửi..." : lookupLoading ? "Đang kiểm tra lịch..." : "Gửi kế hoạch cho giảng viên"}</button></div>
+    <div className="form-actions">{onCancel && <button type="button" className="refresh-button" onClick={onCancel} disabled={busy}>Hủy bỏ</button>}<button className="primary-button" disabled={busy || !dates.length || !ready || blocked}>{busy ? "Đang gửi..." : lookupLoading ? "Đang kiểm tra lịch..." : "Gửi kế hoạch cho giảng viên"}</button></div>
   </form>;
 }

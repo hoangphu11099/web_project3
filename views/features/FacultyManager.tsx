@@ -1,4 +1,6 @@
 "use client";
+import { PaginatedItems } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/controllers/api.controller";
@@ -28,8 +30,8 @@ export function FacultyManager({token,onToast}:{token:string;onToast:ToastHandle
     catch(reason){const message=reason instanceof Error?reason.message:"Không lưu được giới thiệu";setError(message);onToast(message,"error");}
     finally{setBusy(0);}
   };
-  return <section><div className="feature-form"><h2>Giới thiệu giảng viên</h2><p>Thêm ảnh chân dung và phần giới thiệu hiển thị trong đội ngũ giảng viên trên website. Tên, chuyên ngành và trình độ lấy từ hồ sơ giảng viên.</p><label>Tìm giảng viên<input placeholder="Tên hoặc chuyên ngành…" value={query} onChange={e=>setQuery(e.target.value)} /></label></div>{error&&<p className="feature-error" role="alert">{error}</p>}{loading?<p>Đang tải giảng viên…</p>:<div className="faculty-admin-grid">{items.filter(teacher=>`${teacher.name} ${teacher.major}`.toLowerCase().includes(query.toLowerCase())).map(teacher=>{
+  return <section><div className="feature-form"><h2>Giới thiệu giảng viên</h2><p>Thêm ảnh chân dung và phần giới thiệu hiển thị trong đội ngũ giảng viên trên website. Tên, chuyên ngành và trình độ lấy từ hồ sơ giảng viên.</p><label>Tìm giảng viên<input placeholder="Tên hoặc chuyên ngành…" value={query} onChange={e=>setQuery(e.target.value)} /></label></div>{error&&<p className="feature-error" role="alert">{error}</p>}{loading?<p>Đang tải giảng viên…</p>:<div className="faculty-admin-grid">{(<PaginatedItems>{items.filter(teacher=>`${teacher.name} ${teacher.major}`.toLowerCase().includes(query.toLowerCase())).map(teacher=>{
     const draft=drafts[teacher.id];const dirty=draft.biography!==(teacher.biography||"")||draft.avatarUrl!==(teacher.avatarUrl||"");
     return <form className="feature-form faculty-admin-card" key={teacher.id} onSubmit={event=>{event.preventDefault();void save(teacher);}}><header><div className="faculty-admin-avatar">{draft.avatarUrl?<img key={draft.avatarUrl} src={draft.avatarUrl} alt={`Ảnh ${teacher.name}`} />:<Icon name="teacher" size={32} />}</div><div><h3>{teacher.name}</h3><p>{teacher.major || "Chưa có chuyên ngành"} · {teacher.qualification || "Chưa có trình độ"}</p></div></header><label>Link ảnh chân dung<input maxLength={2048} placeholder="https://… hoặc /giang-vien.jpg" value={draft.avatarUrl} onChange={e=>setDrafts(current=>({...current,[teacher.id]:{...draft,avatarUrl:e.target.value}}))} /></label><label>Giới thiệu<textarea rows={6} maxLength={5000} placeholder="Giới thiệu chuyên môn, lĩnh vực giảng dạy, phương pháp hướng dẫn và kinh nghiệm đã được xác nhận…" value={draft.biography} onChange={e=>setDrafts(current=>({...current,[teacher.id]:{...draft,biography:e.target.value}}))} /><small>{draft.biography.length}/5000 ký tự · Để trống sẽ hiển thị giới thiệu cơ bản theo hồ sơ.</small></label><div className="form-actions"><button className="primary-button" disabled={Boolean(busy)||!dirty}><Icon name="check" size={15} />{busy===teacher.id?"Đang lưu…":"Lưu giới thiệu"}</button><button type="button" className="refresh-button" disabled={Boolean(busy)||!dirty} onClick={()=>setDrafts(current=>({...current,[teacher.id]:{biography:teacher.biography||"",avatarUrl:teacher.avatarUrl||""}}))}>Bỏ thay đổi</button></div></form>;
-  })}</div>}</section>;
+  })}</PaginatedItems>)}</div>}</section>;
 }

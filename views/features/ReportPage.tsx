@@ -1,4 +1,6 @@
 "use client";
+import { PaginatedTable } from "@/components/common/Pagination";
+
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useState } from "react";
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
@@ -38,7 +40,7 @@ export function ReportPage({role,token,onToast,metadata}:{role:Role;token:string
   const classes=metadata.classes.filter(row=>`${keyOf(row,"ClassCode")} ${pick(row,"Major.Name")}`.toLocaleLowerCase("vi").includes(query.trim().toLocaleLowerCase("vi")));
   return <section className="feature-page report-page"><div className="feature-heading"><div><h1>Báo cáo theo lớp</h1><p>Chọn lớp để xem chuyên cần, kết quả học tập, giảng dạy và các báo cáo liên quan.</p></div></div>
     <div className="feature-tools"><input aria-label="Tìm lớp báo cáo" placeholder="Tìm mã lớp, chuyên ngành…" value={query} onChange={event=>setQuery(event.target.value)}/><span>{classes.length} lớp</span></div>
-    <div className="feature-table-wrap"><table><thead><tr><th>Lớp học</th><th>Chuyên ngành</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{classes.map(row=><tr key={idOf(row)}><td><button className="refresh-button" onClick={()=>setSelected(idOf(row))}>{display(keyOf(row,"ClassCode"))}</button></td><td>{display(pick(row,"Major.Name"))}</td><td>{keyOf(row,"Status")==="open"?"Đang mở":"Đã đóng"}</td><td><button className="primary-button" onClick={()=>setSelected(idOf(row))}>Xem báo cáo</button></td></tr>)}{!classes.length&&<tr><td colSpan={4}>Không có lớp phù hợp.</td></tr>}</tbody></table></div>
+    <div className="feature-table-wrap"><PaginatedTable><thead><tr><th>Lớp học</th><th>Chuyên ngành</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{classes.map(row=><tr key={idOf(row)}><td><button className="refresh-button" onClick={()=>setSelected(idOf(row))}>{display(keyOf(row,"ClassCode"))}</button></td><td>{display(pick(row,"Major.Name"))}</td><td>{keyOf(row,"Status")==="open"?"Đang mở":"Đã đóng"}</td><td><button className="primary-button" onClick={()=>setSelected(idOf(row))}>Xem báo cáo</button></td></tr>)}{!classes.length&&<tr><td colSpan={4}>Không có lớp phù hợp.</td></tr>}</tbody></PaginatedTable></div>
   </section>;
 }
 
@@ -74,7 +76,7 @@ function DetailedReport({ role, token, onToast, classID = "", onBack }: { role: 
       ...(data.assignments?.conflicts ?? []).map(r => [r.first, r.second, "—", dateLabel(r.date), `Trùng ${r.reason.toLowerCase()}`, "Cần điều chỉnh lịch"]),
     ] };
   }, [data, kind, admin]);
-  const filteredRows = table.rows.slice((page - 1) * 25, page * 25), pages = Math.max(1, Math.ceil(table.rows.length / 25));
+  const filteredRows = table.rows.slice((page - 1) * 20, page * 20), pages = Math.max(1, Math.ceil(table.rows.length / 20));
   const exportExcel = () => {
     if (!data || loading) return;
     try {
@@ -128,7 +130,7 @@ function DetailedReport({ role, token, onToast, classID = "", onBack }: { role: 
         {kind === "risks" && <p className="report-footnote">Gợi ý theo dõi khi vắng quá 25% lượt điểm danh đã chốt (gồm có phép), hoặc điểm môn đã duyệt dưới 40; không thay thế quyết định cảnh báo học vụ.</p>}
         {kind === "rooms" && <p className="report-footnote">Phòng chưa có lịch trong phạm vi lọc không có nghĩa đang trống tại mọi thời điểm.</p>}
         {kind === "assignments" && data.assignments && <div className="report-assignment-summary"><span>Lớp có giảng viên <b>{data.assignments.assignedClasses}</b></span><span>Lớp chưa có giảng viên trong bộ lọc <b>{data.assignments.unassignedClasses.length}</b></span><span>Chờ xác nhận <b>{data.assignments.pending.length}</b></span><span>Trùng lịch <b>{data.assignments.conflicts.length}</b></span></div>}
-        <div className="report-table-scroll"><table className="report-table"><thead><tr>{table.headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{filteredRows.length ? filteredRows.map((row, i) => <tr key={`${kind}-${page}-${i}`}>{row.map((cell, j) => <td key={j}>{typeof cell === "number" ? number(cell) : cell || "—"}</td>)}</tr>) : <tr><td colSpan={table.headers.length}><p className="report-empty">{kind === "assignments" ? "Không có trường hợp cần xử lý trong phạm vi lọc." : "Không có dữ liệu phù hợp. Hãy thử thay đổi bộ lọc."}</p></td></tr>}</tbody></table></div>
+        <div className="report-table-scroll"><PaginatedTable className="report-table"><thead><tr>{table.headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{filteredRows.length ? filteredRows.map((row, i) => <tr key={`${kind}-${page}-${i}`}>{row.map((cell, j) => <td key={j}>{typeof cell === "number" ? number(cell) : cell || "—"}</td>)}</tr>) : <tr><td colSpan={table.headers.length}><p className="report-empty">{kind === "assignments" ? "Không có trường hợp cần xử lý trong phạm vi lọc." : "Không có dữ liệu phù hợp. Hãy thử thay đổi bộ lọc."}</p></td></tr>}</tbody></PaginatedTable></div>
         <div className="report-pagination"><span>Trang {page}/{pages}</span><button className="refresh-button" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Trước</button><button className="refresh-button" disabled={page >= pages} onClick={() => setPage(p => p + 1)}>Sau</button></div>
       </div></section>
     </div>}

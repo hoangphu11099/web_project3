@@ -1,4 +1,8 @@
 "use client";
+import { PaginatedItems } from "@/components/common/Pagination";
+
+import { PaginatedTable } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -103,7 +107,7 @@ export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNa
         ? <p className="empty-note">Đang tải lịch dạy...</p>
         : today.length === 0
           ? <p className="empty-note">Hôm nay không có lịch dạy phù hợp bộ lọc.</p>
-          : <div className="teaching-card-list">{today.map((item) => <ScheduleCard key={item.id} item={item} now={now} onAttendance={() => onNavigate("Điểm danh")} />)}</div>}
+          : <div className="teaching-card-list">{(<PaginatedItems>{today.map((item) => <ScheduleCard key={item.id} item={item} now={now} onAttendance={() => onNavigate("Điểm danh")} />)}</PaginatedItems>)}</div>}
     </section>
 
     {!loading && !error && <section className="panel teaching-next"><div className="teaching-section-heading"><div><h2>Buổi dạy tiếp theo</h2><p>{!today.length?"Hôm nay không có lịch dạy phù hợp bộ lọc.":"Theo dõi buổi dạy gần nhất của bạn."}</p></div></div>{nextLesson ? <><strong>{formatTeachingDate(new Date(`${nextLesson.date}T12:00:00+07:00`))}</strong><dl className="offer-plan-summary"><div><dt>Lớp</dt><dd>{nextLesson.item.classCode}</dd></div><div><dt>Môn học</dt><dd>{nextLesson.item.courseName}</dd></div><div><dt>Phòng</dt><dd>{nextLesson.item.roomName || "Chưa xếp phòng"} · {nextLesson.item.building}</dd></div><div><dt>Thời gian</dt><dd>{timeRange(nextLesson.item)} · {nextLesson.item.session}</dd></div></dl></> : <p>Chưa có buổi dạy tiếp theo được xếp lịch.</p>}</section>}
@@ -122,7 +126,7 @@ export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNa
       </div>
 
       <div className="feature-table-wrap">
-        <table>
+        <PaginatedTable>
           <thead><tr><th>Ngày dạy</th><th>Thời gian</th><th>Lớp</th><th>Môn học</th><th>Phòng</th><th>Học kỳ</th><th>Trạng thái</th></tr></thead>
           <tbody>
             {loading
@@ -139,7 +143,7 @@ export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNa
                     <td><span className={`teaching-badge ${state}`}>{teachingStateLabel(state)}</span></td>
                   </tr>)}
           </tbody>
-        </table>
+        </PaginatedTable>
       </div>
     </section>
 
@@ -148,8 +152,8 @@ export function TeacherSchedulePage({ token, onNavigate }: { token: string; onNa
         <div><h2>Lịch theo học phần</h2><p>Tách các môn còn lịch dạy và các môn đã kết thúc.</p></div>
       </div>
       <div className="teacher-tabs" role="tablist" aria-label="Lịch theo trạng thái"><button role="tab" aria-selected={scheduleTab==="upcoming"} onClick={()=>setScheduleTab("upcoming")}>Đang hoạt động / Sắp tới</button><button role="tab" aria-selected={scheduleTab==="ended"} onClick={()=>setScheduleTab("ended")}>Đã kết thúc</button></div>
-      <div className="feature-table-wrap"><table><thead><tr><th>Môn học</th><th>Lớp</th><th>Học kỳ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{loading?<tr><td colSpan={5}>Đang tải…</td></tr>:offeringRows.map(item=><tr key={item.courseOfferingId} style={scheduleTab==="ended"?{color:"#94a3b8",background:"#f8fafc"}:undefined}><td><button className="refresh-button" onClick={()=>{setDetailTab(scheduleTab==="ended"?"ended":"upcoming");setOfferingDetail(item.courseOfferingId);}}>{item.courseName}</button><small className="table-sub">{item.courseCode}</small></td><td>{item.classCode}</td><td>{item.semesterName}</td><td>{scheduleTab==="ended"?"Đã kết thúc":"Còn lịch dạy"}</td><td><button className="refresh-button" onClick={()=>{setDetailTab(scheduleTab==="ended"?"ended":"upcoming");setOfferingDetail(item.courseOfferingId);}}>Chi tiết lịch dạy</button></td></tr>)}{!loading&&!offeringRows.length&&<tr><td colSpan={5}>Không có môn phù hợp.</td></tr>}</tbody></table></div>
-      {offeringDetail!==null&&<FeatureDialog title="Chi tiết lịch dạy" description={`${detailRows[0]?.courseName||""} · ${detailRows[0]?.classCode||""} · ${detailRows[0]?.semesterName||""}`} onClose={()=>setOfferingDetail(null)}><div className="teacher-tabs" role="tablist" aria-label="Buổi dạy"><button role="tab" aria-selected={detailTab==="upcoming"} onClick={()=>setDetailTab("upcoming")}>Sắp tới ({detailRows.filter(item=>!item.ended).length})</button><button role="tab" aria-selected={detailTab==="ended"} onClick={()=>setDetailTab("ended")}>Đã dạy ({detailRows.filter(item=>item.ended).length})</button></div><div className="feature-table-wrap"><table><thead><tr><th>Ngày / Thứ</th><th>Giờ dạy</th><th>Phòng</th><th>Trạng thái</th></tr></thead><tbody>{visibleDetails.map(item=><tr key={`${item.id}-${item.teachingDate}`}><td>{item.teachingDate?formatTeachingDate(new Date(`${item.teachingDate}T12:00:00+07:00`)):dayLabel(item.dayOfWeek)}</td><td>{timeRange(item)}<small className="table-sub">{item.session}</small></td><td>{item.roomName||"Chưa xếp"}</td><td>{item.ended?"Đã kết thúc":teachingStateLabel(teachingState(item,now))}</td></tr>)}{!visibleDetails.length&&<tr><td colSpan={4}>{detailTab==="ended"?"Chưa có buổi đã dạy.":"Không còn buổi sắp tới."}</td></tr>}</tbody></table></div></FeatureDialog>}
+      <div className="feature-table-wrap"><PaginatedTable><thead><tr><th>Môn học</th><th>Lớp</th><th>Học kỳ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{loading?<tr><td colSpan={5}>Đang tải…</td></tr>:offeringRows.map(item=><tr key={item.courseOfferingId} style={scheduleTab==="ended"?{color:"#94a3b8",background:"#f8fafc"}:undefined}><td><button className="refresh-button" onClick={()=>{setDetailTab(scheduleTab==="ended"?"ended":"upcoming");setOfferingDetail(item.courseOfferingId);}}>{item.courseName}</button><small className="table-sub">{item.courseCode}</small></td><td>{item.classCode}</td><td>{item.semesterName}</td><td>{scheduleTab==="ended"?"Đã kết thúc":"Còn lịch dạy"}</td><td><button className="refresh-button" onClick={()=>{setDetailTab(scheduleTab==="ended"?"ended":"upcoming");setOfferingDetail(item.courseOfferingId);}}>Chi tiết lịch dạy</button></td></tr>)}{!loading&&!offeringRows.length&&<tr><td colSpan={5}>Không có môn phù hợp.</td></tr>}</tbody></PaginatedTable></div>
+      {offeringDetail!==null&&<FeatureDialog title="Chi tiết lịch dạy" description={`${detailRows[0]?.courseName||""} · ${detailRows[0]?.classCode||""} · ${detailRows[0]?.semesterName||""}`} onClose={()=>setOfferingDetail(null)}><div className="teacher-tabs" role="tablist" aria-label="Buổi dạy"><button role="tab" aria-selected={detailTab==="upcoming"} onClick={()=>setDetailTab("upcoming")}>Sắp tới ({detailRows.filter(item=>!item.ended).length})</button><button role="tab" aria-selected={detailTab==="ended"} onClick={()=>setDetailTab("ended")}>Đã dạy ({detailRows.filter(item=>item.ended).length})</button></div><div className="feature-table-wrap"><PaginatedTable><thead><tr><th>Ngày / Thứ</th><th>Giờ dạy</th><th>Phòng</th><th>Trạng thái</th></tr></thead><tbody>{visibleDetails.map(item=><tr key={`${item.id}-${item.teachingDate}`}><td>{item.teachingDate?formatTeachingDate(new Date(`${item.teachingDate}T12:00:00+07:00`)):dayLabel(item.dayOfWeek)}</td><td>{timeRange(item)}<small className="table-sub">{item.session}</small></td><td>{item.roomName||"Chưa xếp"}</td><td>{item.ended?"Đã kết thúc":teachingStateLabel(teachingState(item,now))}</td></tr>)}{!visibleDetails.length&&<tr><td colSpan={4}>{detailTab==="ended"?"Chưa có buổi đã dạy.":"Không còn buổi sắp tới."}</td></tr>}</tbody></PaginatedTable></div></FeatureDialog>}
 
     </section>
   </section>;

@@ -68,6 +68,15 @@ export function offeringStudyStatus(offering: Row, now: number): string {
   return status;
 }
 
+export function exerciseOfferingEnded(offering: Row, now: number): boolean {
+  if (keyOf(offering,"Status") !== "open" || keyOf(offering,"HomeroomStatus") === "closed" || pick(offering,"Class.Status") === "closed") return true;
+  const lessons = classLessons(offering);
+  if (lessons.length) return lessons.every(lesson => Date.parse(`${lesson.date}T${lesson.endTime || "23:59"}+07:00`) <= now);
+  const end = String(pick(offering,"Semester.EndDate") || "").slice(0,10);
+  const today = new Date(now+7*3600000).toISOString().slice(0,10);
+  return pick(offering,"Semester.Status") === "closed" || (!!end && end < today);
+}
+
 export function classStudyStatus(classRow: Row, offerings: Row[], now: number): string {
   const status = String(keyOf(classRow, "Status") || "open");
   if (status !== "open") return status;

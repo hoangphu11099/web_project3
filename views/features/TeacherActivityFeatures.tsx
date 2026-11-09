@@ -1,4 +1,8 @@
 "use client";
+import { PaginatedItems } from "@/components/common/Pagination";
+
+import { PaginatedTable } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -21,7 +25,7 @@ import type { TeachingSchedule } from "@/models/teaching-schedule";
 import { AttendanceQr } from "@/components/common/AttendanceQr";
 import { AttendanceProjection } from "@/components/common/AttendanceProjection";
 import { PanelHeader } from "@/components/common/PanelHeader";
-import { offeringStudyStatus } from "@/controllers/class-schedule";
+import { exerciseOfferingEnded } from "@/controllers/class-schedule";
 import { FeatureDialog } from "@/components/common/FeatureDialog";
 import { Icon } from "@/components/ui/Icon";
 
@@ -404,7 +408,7 @@ export function AttendanceManager({
                 {syncError ? `Chưa đồng bộ được: ${syncError}. Hệ thống sẽ thử lại.` : `${sessionActive ? "Tự cập nhật mỗi 3 giây" : "Phiên đã đóng"}${lastSyncedAt ? ` · Cập nhật lúc ${lastSyncedAt}` : " · Đang tải danh sách…"}`}
               </p>
               <div className="attendance-records">
-                {records.map((record, index) => {
+                {(<PaginatedItems>{records.map((record, index) => {
                   const enrollment = (keyOf(record, "enrollment") || {}) as Row;
                   const attendance = (keyOf(record, "attendance") || {}) as Row;
                   const currentStatus = String(
@@ -435,7 +439,7 @@ export function AttendanceManager({
                       </select>
                     </div>
                   );
-                })}
+                })}</PaginatedItems>)}
               </div>
             </>
           )}
@@ -478,6 +482,8 @@ export function ExerciseManager({
   const [error, setError] = useErrorFeedback();
   const [selected, setSelected] = useState<Row | null>(null);
   const [submissions, setSubmissions] = useState<Row[]>([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionsError, setSubmissionsError] = useState("");
   const [gradeDrafts, setGradeDrafts] = useState<
     Record<number, SubmissionDraft>
   >({});
@@ -504,12 +510,12 @@ export function ExerciseManager({
   useEffect(() => {
     load();
   }, [token]);
-  const endedOffering=(row:Row)=>keyOf(row,"HomeroomStatus")==="closed" || ["closed","completed","finished"].includes(offeringStudyStatus(row,now)) || pick(row,"Semester.Status")==="closed" || (Boolean(pick(row,"Semester.EndDate")) && new Date(String(pick(row,"Semester.EndDate"))).getTime()+86400000<=now);
+  const endedOffering=(row:Row)=>exerciseOfferingEnded(row,now);
   const classChoices=Array.from(new Map(classes.map(row=>[String(keyOf(row,"ClassID")),{id:String(keyOf(row,"ClassID")),code:String(keyOf(row,"HomeroomCode"))}])).values()).map(item=>({...item,ended:classes.filter(row=>String(keyOf(row,"ClassID"))===item.id).every(endedOffering)}));
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if(busy)return;
-    if(!classes.some(row=>idOf(row)===Number(form.courseOfferingId)&&String(keyOf(row,"ClassID"))===exerciseClass&&keyOf(row,"Status")==="open"&&!endedOffering(row))) {setError("Vui lòng chọn môn được phân công trong lớp và học kỳ chưa đóng.");return;}
+    if(!classes.some(row=>idOf(row)===Number(form.courseOfferingId)&&String(keyOf(row,"ClassID"))===exerciseClass&&keyOf(row,"Status")==="open"&&!endedOffering(row))) {setError("Vui lòng chọn môn được phân công trong lớp chưa học xong.");return;}
     setBusy(true);
     setError("");
 
@@ -536,6 +542,8 @@ export function ExerciseManager({
   const viewSubmissions = async (exercise: Row) => {
     const request = ++submissionRequest.current;
     setSelected(exercise);
+    setSubmissionsLoading(true);
+    setSubmissionsError("");
     setSubmissions([]);
     setGradeDrafts({});
     try {
@@ -554,7 +562,9 @@ export function ExerciseManager({
         };
       setGradeDrafts(next);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Không tải được bài nộp");
+      if (request === submissionRequest.current) setSubmissionsError(e instanceof Error ? e.message : "Không tải được bài nộp");
+    } finally {
+      if (request === submissionRequest.current) setSubmissionsLoading(false);
     }
   };
   const grade = async (submission: Row) => {
@@ -592,7 +602,7 @@ export function ExerciseManager({
         </div>
         <button
           className="primary-button"
-          onClick={() => setFormOpen(!formOpen)}>
+          onClick={() => { if (!formOpen) void load(); setFormOpen(!formOpen); }}>
           <Icon name={formOpen ? "close" : "plus"} size={15} />
           {formOpen ? "Đóng form" : "Tạo bài tập"}
         </button>
@@ -600,7 +610,7 @@ export function ExerciseManager({
       {formOpen && (
         <FeatureDialog className="entity-editor-dialog" title="Tạo bài tập" onClose={()=>{if(!busy)setFormOpen(false);}}><form className="feature-form entity-editor-form" onSubmit={create}><fieldset disabled={busy}>
           <div className="form-grid">
-            <label>Lớp học<select required value={exerciseClass} onChange={event=>{setExerciseClass(event.target.value);setForm(current=>({...current,courseOfferingId:""}));}}><option value="">Chọn lớp đang dạy</option>{classChoices.map(item=><option key={item.id} value={item.id} disabled={item.ended}>{item.code}{item.ended?" · Đã kết thúc":""}</option>)}</select></label>
+            <label>Lớp học<select required value={exerciseClass} onChange={event=>{const classID=event.target.value; const offering=classes.find(row=>String(keyOf(row,"ClassID"))===classID&&!endedOffering(row));setExerciseClass(classID);setForm(current=>({...current,courseOfferingId:offering?String(idOf(offering)):""}));}}><option value="">Chọn lớp đang dạy</option>{classChoices.map(item=><option key={item.id} value={item.id} disabled={item.ended}>{item.code}{item.ended?" · Các môn phụ trách đã kết thúc":""}</option>)}</select></label>
             <label>
               Môn đang phụ trách
               <select
@@ -653,7 +663,7 @@ export function ExerciseManager({
               />
             </label>
           </div>
-          </fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setFormOpen(false)}>Hủy bỏ</button><button className="primary-button" disabled={busy}>
+          </fieldset><p>Chỉ hiển thị các môn được phân công cho bạn. Các môn còn lịch dạy được phép tạo bài tập, kể cả chưa bắt đầu học.</p>{error && <div className="feature-error" role="alert">{error}</div>}<div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setFormOpen(false)}>Hủy bỏ</button><button className="primary-button" disabled={busy || !form.courseOfferingId}>
             {busy ? "Đang lưu..." : "Lưu bài tập"}
           </button>
           </div></form></FeatureDialog>
@@ -691,9 +701,9 @@ export function ExerciseManager({
       {error && <div className="feature-error">! {error}</div>}
       {availability && <form className="feature-form" onSubmit={event => { event.preventDefault(); void updateAvailability(availability, "open"); }}><h2>Mở lại / gia hạn: {display(keyOf(availability, "Title"))}</h2><label>Hạn nộp mới<input type="datetime-local" required value={newDeadline} onChange={event => setNewDeadline(event.target.value)} /></label><p>Đến hạn mới, hệ thống tự khóa nộp bài.</p><div className="form-actions"><button className="primary-button" disabled={busy}>Mở nhận bài</button><button type="button" className="refresh-button" onClick={() => setAvailability(null)}>Hủy</button></div></form>}
       <button className="refresh-button" onClick={load}>Làm mới bài tập</button>
-      <div className="split-layout">
+      <div className="exercise-list-layout">
         <div className="feature-table-wrap">
-          <table>
+          <PaginatedTable>
             <thead>
               <tr>
                 <th>Bài tập</th>
@@ -730,27 +740,19 @@ export function ExerciseManager({
                 ))
               )}
             </tbody>
-          </table>
+          </PaginatedTable>
         </div>
         {selected && (
-          <div className="panel submissions-drawer">
-            <div className="drawer-head">
-              <div>
-                <strong>{display(keyOf(selected, "Title"))}</strong>
-                <span>{submissions.length} bài đã nộp</span>
-              </div>
-              <button onClick={() => { submissionRequest.current++; setSelected(null); }}>
-                <Icon name="close" size={16} />
-              </button>
-            </div>
-            {submissions.length === 0 ? (
+          <FeatureDialog className="exercise-submissions-dialog" title={`Bài nộp · ${display(keyOf(selected, "Title"))}`} description={`${display(pick(selected,"Class.ClassCode"))} · ${display(pick(selected,"CourseOffering.Course.Name"))}`} onClose={() => { submissionRequest.current++; setSelected(null); }}>
+            <div className="exercise-submissions-summary"><strong>{submissionsLoading ? "Đang tải bài nộp…" : `${submissions.length} bài đã nộp`}</strong><button className="refresh-button" disabled={submissionsLoading} onClick={()=>void viewSubmissions(selected)}>Làm mới</button></div>
+            {submissionsError ? <div className="feature-error" role="alert">{submissionsError}</div> : submissionsLoading ? <p className="empty-note" role="status">Đang tải danh sách bài nộp…</p> : submissions.length === 0 ? (
               <p className="empty-note">Chưa có bài nộp.</p>
             ) : (
-              submissions.map((submission) => {
+              <PaginatedItems>{submissions.map((submission) => {
                 const id = idOf(submission);
                 return (
-                  <div className="submission-grade" key={id}>
-                    <div>
+                  <div className="exercise-submission-card" key={id}>
+                    <div className="exercise-submission-content">
                       <strong>
                         {display(pick(submission, "Student.User.FullName"))}
                       </strong>
@@ -768,12 +770,12 @@ export function ExerciseManager({
                         </a>
                       )}
                     </div>
-                    <button disabled={busy} onClick={()=>setGrading(submission)}>{keyOf(submission,"Status")==="graded"?"Xem / sửa điểm":"Chấm điểm"}</button>
+                    <button className="primary-button exercise-grade-button" disabled={busy} onClick={()=>setGrading(submission)}>{keyOf(submission,"Status")==="graded"?"Xem / sửa điểm":"Chấm điểm"}</button>
                   </div>
                 );
-              })
+              })}</PaginatedItems>
             )}
-          </div>
+          </FeatureDialog>
         )}
       </div>
     </section>

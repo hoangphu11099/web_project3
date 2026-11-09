@@ -557,3 +557,136 @@ button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .unread .offer-mail-dot { background: #3459e6; }
 .offer-mail-row:focus-visible { outline: 3px solid #6285ff; outline-offset: -3px; }
 @media(max-width:760px) { .offer-mail-row { grid-template-columns: 8px minmax(0,1fr); gap:12px; padding:18px; } .offer-mail-row > .offer-status, .offer-mail-row > time { grid-column: 2; justify-self:start; } }
+
+.school-schedule-page .school-day-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  background: #fff;
+  border: 1px solid #e2e8f4;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px #233c7010;
+}
+.school-schedule-page .school-day-controls label,
+.school-schedule-page .school-schedule-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #526582;
+  font-size: 13px;
+  font-weight: 500;
+}
+.school-schedule-page .school-day-controls input,
+.school-schedule-page .school-schedule-search input {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 11px 15px;
+  border: 1px solid #d6dfef;
+  border-radius: 10px;
+  background: #fbfcff;
+  color: #172b4d;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.school-schedule-page input:focus-visible,
+.school-schedule-page button:focus-visible {
+  outline: 3px solid #bdccff;
+  outline-offset: 3px;
+}
+.school-schedule-page > h2 {
+  margin: 26px 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #172b4d;
+}
+.school-schedule-page .school-shift-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0 16px;
+}
+.school-schedule-page .school-shift-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 150px;
+  padding: 22px 24px;
+  border: 1px solid #e1e7f3;
+  border-radius: 16px;
+  text-align: left;
+  font: inherit;
+  color: #526582;
+  background: #fff;
+  box-shadow: 0 4px 18px #233c7008;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.school-schedule-page .school-shift-card::after {
+  content: "";
+  position: absolute;
+  right: 24px;
+  top: 26px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #9baed2;
+}
+.school-schedule-page .school-shift-card:nth-child(2)::after { background: #eba93b; }
+.school-schedule-page .school-shift-card:nth-child(3)::after { background: #26ad8b; }
+.school-schedule-page .school-shift-card:nth-child(4)::after { background: #8d75d5; }
+.school-schedule-page .school-shift-card > span { font-size: 14px; font-weight: 600; }
+.school-schedule-page .school-shift-card > strong { color: #172b4d; font-size: 30px; font-weight: 750; line-height: 1.15; }
+.school-schedule-page .school-shift-card > small { color: #7a8ba7; font-size: 13px; }
+.school-schedule-page .school-shift-card:hover { border-color: #a8bbee; box-shadow: 0 6px 22px #3159d815; }
+.school-schedule-page .school-shift-card.selected { border-color: #4265df; background: #eef3ff; box-shadow: inset 0 0 0 1px #4265df; }
+.school-schedule-page .school-shift-card.selected > strong,
+.school-schedule-page .school-shift-card.selected > span { color: #3159d8; }
+.school-schedule-page > .muted { margin: 12px 0 24px; color: #8490a6; font-size: 12px; line-height: 1.7; }
+.school-schedule-page .school-schedule-search { max-width: 600px; margin: 24px 0 16px; }
+.school-schedule-page > p:not(.muted) { margin: 16px 0; font-size: 14px; color: #526582; }
+.school-schedule-page .feature-table-wrap { margin-top: 14px; border-radius: 16px; }
+.school-schedule-page th:last-child,
+.school-schedule-page td:last-child { text-align: left; }
+.school-schedule-page td { vertical-align: middle; }
+.school-schedule-page td:first-child strong { font-size: 14px; color: #253c64; }
+.school-schedule-page .cell-sub { display: block; margin-top: 6px; font-size: 12px; line-height: 1.5; }
+@media (max-width: 1000px) {
+  .school-schedule-page .school-shift-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .school-schedule-page .school-day-controls { padding: 16px; gap: 10px; }
+  .school-schedule-page .school-day-controls label { order: -1; width: 100%; }
+  .school-schedule-page .school-day-controls button { flex: 1; padding-inline: 10px; }
+  .school-schedule-page .school-shift-cards { gap: 10px; }
+  .school-schedule-page .school-shift-card { padding: 18px; min-height: 132px; }
+  .school-schedule-page .school-shift-card::after { right: 16px; top: 23px; }
+  .school-schedule-page .school-shift-card > strong { font-size: 26px; }
+}
+
+.exercise-list-layout { display:block; margin-top:16px; }
+.exercise-submissions-dialog.learning-modal { width:min(900px,calc(100vw - 32px)); }
+.exercise-submissions-dialog .learning-modal-body { background:#f6f8fc; padding:24px; }
+.exercise-submissions-summary { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; color:#304c75; }
+.exercise-submission-card { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding:22px; margin-bottom:14px; border:1px solid #e0e7f2; border-radius:14px; background:white; box-shadow:0 3px 12px #20386106; }
+.exercise-submission-content { min-width:0; flex:1; }
+.exercise-submission-content > strong { display:block; color:#172b4d; font-size:16px; margin-bottom:7px; }
+.exercise-submission-content > small { display:block; color:#8391a8; font-size:12px; line-height:1.6; }
+.exercise-submission-content > p { white-space:pre-wrap; overflow-wrap:anywhere; margin:16px 0; color:#405674; line-height:1.7; font-size:14px; }
+.exercise-submission-content > a { display:inline-flex; border:1px solid #d7e3ff; background:#f1f6ff; color:#3159d8; border-radius:9px; padding:9px 13px; font-size:13px; font-weight:600; text-decoration:none; }
+.exercise-submissions-dialog .exercise-grade-button { background:#3159d8; color:white; border:1px solid #3159d8; box-shadow:0 4px 10px #3159d822; padding:12px 20px; border-radius:10px; white-space:nowrap; font-weight:600; min-height:44px; }
+.exercise-submissions-dialog .exercise-grade-button:hover { background:#2448bf; }
+@media(max-width:600px) { .exercise-submission-card { flex-direction:column; gap:16px; padding:16px; }.exercise-grade-button { width:100%; }.exercise-submissions-dialog .learning-modal-body { padding:16px; } }
+
+.quiz-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:20px 0; }
+.quiz-toolbar label { display:flex; flex-direction:column; gap:8px; cursor:pointer; }
+.quiz-toolbar input[type=file] { max-width:260px; font-size:12px; }
+.quiz-detail-dialog.learning-modal { width:min(1050px,calc(100vw - 32px)); }
+.quiz-detail-dialog .learning-modal-body > p { line-height:1.7; color:#657795; margin-bottom:12px; }
+.quiz-detail-dialog td p { margin-top:8px; white-space:pre-wrap; overflow-wrap:anywhere; }

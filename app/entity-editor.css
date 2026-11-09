@@ -1,4 +1,34 @@
 .entity-editor-dialog { width: min(920px, calc(100vw - 32px)); }
+.entity-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.entity-pagination > span:first-child { margin-right: auto; }
+.entity-pagination { padding: 14px 16px; grid-column: 1 / -1; }
+.pagination-list-item { list-style: none; }
+.teacher-class-grid > .entity-pagination, .admin-post-grid > .entity-pagination, .program-image-grid > .entity-pagination { grid-column: 1 / -1; }
+.teaching-offer-dialog .teaching-offer-form { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+.teaching-offer-dialog .teaching-offer-form > .form-actions { position: sticky; bottom: -1px; z-index: 2; padding: 18px 0; background: white; border-top: 1px solid #e3e9f4; }
+.offer-inbox { margin-top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: white; }
+.offer-inbox-heading { display: flex; justify-content: space-between; gap: 16px; padding: 18px 22px; background: #f8faff; border-bottom: 1px solid var(--line); }
+.offer-inbox-heading span, .offer-inbox-heading small { color: var(--muted); font-weight: 400; }
+.offer-inbox-item { display: flex; align-items: center; gap: 16px; width: 100%; padding: 20px 22px; border: 0; border-bottom: 1px solid var(--line); background: white; text-align: left; color: inherit; cursor: pointer; font: inherit; }
+.offer-inbox-item:last-child { border-bottom: 0; }
+.offer-inbox-item:hover { background: #f8faff; }
+.offer-inbox-item:focus-visible { outline: 2px solid #3157e8; outline-offset: -3px; }
+.offer-inbox-pending { background: #f5f8ff; }
+.offer-inbox-copy { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.offer-inbox-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.offer-inbox-copy > span, .offer-inbox-meta time { color: var(--muted); font-size: 13px; }
+.offer-inbox-meta { display: grid; gap: 8px; text-align: right; font-size: 13px; }
+.offer-message-body { padding: 24px 28px; }
+.offer-message-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
+.offer-message-content, .offer-message-response p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
+.offer-message-response { margin-top: 24px; padding: 18px; border-radius: 12px; background: #edf8f3; }
+@media (max-width: 640px) {
+  .offer-inbox-heading, .offer-inbox-item { padding: 16px; }
+  .offer-inbox-item { flex-wrap: wrap; gap: 12px; }
+  .offer-inbox-copy { flex-basis: calc(100% - 64px); }
+  .offer-inbox-meta { flex: 1; display: flex; justify-content: space-between; text-align: left; }
+  .offer-message-body { padding: 20px; }
+}
 .entity-editor-dialog .learning-modal-header { padding: 24px 28px; }
 .entity-editor-dialog .learning-modal-body { padding: 0; }
 .entity-editor-dialog .entity-editor-form { margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: #f8faff; }

@@ -1,4 +1,6 @@
 import { ProfilePage } from "./ProfilePage";
+import { QuizManager } from "./QuizManager";
+import { SchoolSchedulePage } from "./SchoolSchedulePage";
 import { CourseRegistrationsPage } from "./CourseRegistrationsPage";
 import { CourseOfferingsPage } from "./CourseOfferingsPage";
 import { TeacherClassesPage } from "./TeacherClassesPage";
@@ -12,6 +14,8 @@ import { TeacherSchedulePage } from "./TeacherSchedulePage";
 import { WebsiteAdminPage } from "./WebsiteAdminPage";
 
 export function FeatureRouter({ role, active, token, metadata, onToast, onNavigate, onProfileUpdated }: { role: Role; active: string; token: string; metadata: MetadataData; onToast: ToastHandler; onNavigate: (value: string) => void; onProfileUpdated:(name:string)=>void }) {
+  if(active === "Trắc nghiệm" && role === "teacher") return <QuizManager token={token} role={role}/>;
+  if (active === "Lịch học toàn trường" && role === "admin") return <SchoolSchedulePage token={token} />;
   if (active === "Học phần" && role === "admin") return <CourseOfferingsPage token={token} metadata={metadata} />;
   if (active === "Đăng ký học phần" && role === "admin") return <CourseRegistrationsPage token={token} metadata={metadata} onToast={onToast} />;
   if (active === "Hồ sơ cá nhân") return <ProfilePage token={token} onToast={onToast} onUpdated={onProfileUpdated} />;

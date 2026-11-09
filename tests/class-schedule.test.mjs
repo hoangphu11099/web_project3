@@ -11,6 +11,26 @@ vm.runInNewContext(compile("../controllers/class-schedule.ts"),context);
 const {classLessons,overlappingLessons} = context.exports;
 const {offeringStudyStatus,classStudyStatus} = context.exports;
 const {weeklyTeachingDates} = context.exports;
+const school = {exports:{}, require:path=>path.includes("api.controller") ? api.exports : context.exports};
+vm.runInNewContext(compile("../controllers/school-schedule.ts"),school);
+test("school day overview counts distinct classes and separates shift boundaries",()=>{
+ const {schoolLessonsOnDate,schoolClassCount,lessonShift}=school.exports;
+ const offering=(ID,ClassID,schedules)=>({ID,ClassID,Schedules:schedules});
+ const schedule=(ID,FullDate,StartTime,EndTime)=>({ID,FullDate,StartTime,EndTime});
+ const rows=[offering(1,10,[schedule(1,"2026-11-11","07:30","10:30"),schedule(2,"2026-11-11","13:30","16:30"),schedule(3,"2026-11-12","13:30","16:30")]),offering(2,20,[schedule(4,"2026-11-11","18:00","20:30")])];
+ const day=schoolLessonsOnDate(rows,"2026-11-11");
+ assert.equal(day.length,3);assert.equal(schoolClassCount(day),2);
+ assert.deepEqual(Array.from(day,l=>lessonShift(l.startTime)),["Sáng","Trưa / Chiều","Tối"]);
+ assert.equal(lessonShift("11:59"),"Sáng");assert.equal(lessonShift("12:00"),"Trưa / Chiều");assert.equal(lessonShift("17:59"),"Trưa / Chiều");assert.equal(lessonShift("18:00"),"Tối");
+ assert.equal(schoolLessonsOnDate(rows,"2026-11-13").length,0);
+});
+test("exercise creation follows the final lesson rather than an earlier semester end", () => {
+ const now=Date.parse("2026-11-09T12:00:00+07:00");
+ const offering={ID:1,Status:"open",HomeroomStatus:"open",Semester:{Status:"closed",StartDate:"2026-01-01",EndDate:"2026-07-31"},Schedules:[{ID:1,FullDate:"2028-07-03",DayOfWeek:"Mon",StartTime:"13:30",EndTime:"16:30"}]};
+ assert.equal(context.exports.exerciseOfferingEnded(offering,now),false);
+ assert.equal(context.exports.exerciseOfferingEnded({...offering,Schedules:[{...offering.Schedules[0],FullDate:"2026-07-20"}],Semester:{...offering.Semester,Status:"active",EndDate:"2028-12-31"}},now),true);
+ assert.equal(context.exports.exerciseOfferingEnded({...offering,HomeroomStatus:"closed"},now),true);
+});
 test("class timetable filters combine semester, course and inclusive date bounds", () => {
  const {filterClassLessons} = context.exports;
  const a={ID:1,SemesterID:10,CourseID:20}, b={ID:2,SemesterID:11,CourseID:20}, c={ID:3,SemesterID:10,CourseID:21};

@@ -151,7 +151,7 @@ export function scheduleDateInWeek(item: TeachingSchedule, weekStart: Date) {
 }
 
 export function teachingStateForDate(item: TeachingSchedule, lessonDate: Date, now = new Date()): TeachingState {
-  if (!isDateInsideSemester(item, lessonDate)) return "outside";
+  if (item.teachingDate ? item.offeringStatus.toLowerCase() !== "open" : !isDateInsideSemester(item, lessonDate)) return "outside";
   if (!sameLocalDate(lessonDate, now)) return lessonDate < now ? "finished" : "scheduled";
 
   const current = now.getHours() * 60 + now.getMinutes();
@@ -177,8 +177,8 @@ export function isActiveSemester(item: TeachingSchedule, now = new Date()) {
 }
 
 export function teachingState(item: TeachingSchedule, now = new Date()): TeachingState {
-  if (!isActiveSemester(item, now)) return "outside";
   if (item.teachingDate) { const date = localDate(item.teachingDate); return date ? teachingStateForDate(item, date, now) : "outside"; }
+  if (!isActiveSemester(item, now)) return "outside";
   if (dayIndex(item.dayOfWeek) !== now.getDay()) return "scheduled";
   const current = now.getHours() * 60 + now.getMinutes(); const start = minutes(item.startTime); const end = minutes(item.endTime);
   if (start < 0 || end < 0) return "scheduled";

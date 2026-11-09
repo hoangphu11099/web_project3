@@ -35,11 +35,14 @@ const adminNav: [string, IconName][] = [
   ["Trang chủ trường", "home"],
   ["Sinh viên", "students"],
   ["Giảng viên", "teacher"],
+  ["Chuyên ngành", "course"],
   ["Năm học", "calendar"],
   ["Học kỳ", "calendar"],
   ["Học phần", "course"],
   ["Đăng ký học phần", "students"],
   ["Lớp học", "class"],
+  ["Lịch học toàn trường", "calendar"],
+
   ["Phòng học", "class"],
   ["Môn học", "course"],
   ["Lịch thi", "calendar"],
@@ -56,6 +59,7 @@ const teacherNav: [string, IconName][] = [
   ["Điểm danh", "attendance"],
   ["Bảng điểm", "grade"],
   ["Bài tập", "exercise"],
+  ["Trắc nghiệm", "exercise"],
   ["Đề xuất lớp", "assign"],
   ["Báo cáo", "report"],
 ];
@@ -71,6 +75,17 @@ export function DashboardApp() {
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [notifications, setNotifications] = useState<Row[]>([]);
   const [metadata, setMetadata] = useState<MetadataData>(emptyMetadata);
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    const refresh = () => {
+      apiRequest(token, "/metadata", { cache: "no-store", signal: controller.signal })
+        .then(payload => { if (!controller.signal.aborted) setMetadata({ ...emptyMetadata, ...(payload.data || {}) }); })
+        .catch(() => { /* Existing load errors are reported by the active page. */ });
+    };
+    refresh(); window.addEventListener("focus", refresh);
+    return () => { controller.abort(); window.removeEventListener("focus", refresh); };
+  }, [token, active]);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [apiOnline, setApiOnline] = useState(false);
   const [toast, setToast] = useState("");
@@ -118,7 +133,7 @@ export function DashboardApp() {
     Promise.all([
       apiRequest(token, `/dashboard/${role}`),
       apiRequest(token, "/metadata"),
-      apiRequest(token, "/notifications"),
+      apiRequest(token, "/notifications?summary=true"),
     ])
       .then(([dashboard, meta, notices]) => {
         setStats(dashboard.data || {});
@@ -172,7 +187,7 @@ export function DashboardApp() {
     setNoticeOpen(next);
     if (!next) return;
     try {
-      const payload = await apiRequest(token, "/notifications");
+      const payload = await apiRequest(token, "/notifications?summary=true");
       setNotifications(
         Array.isArray(payload.data) ? payload.data.slice(0, 6) : [],
       );

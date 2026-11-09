@@ -1,4 +1,6 @@
 "use client";
+import { PaginatedItems, PaginatedTable } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect */
 
@@ -102,7 +104,7 @@ export function WarningPage({ token, metadata, onToast }: { token: string; metad
         <button className="primary-button" disabled={loading || sending || !visible.length} onClick={() => { setError(""); setDraft({ all: true, rows: visible, reason }); }}>Gửi cảnh báo tất cả ({studentCount(visible)})</button></div>
     </div>
     {error && !draft && <div className="feature-error" role="alert">{error}</div>}
-    <div className="feature-table-wrap"><table><thead><tr>
+    <div className="feature-table-wrap"><PaginatedTable><thead><tr>
       <th><input type="checkbox" aria-label="Chọn tất cả dòng đang hiển thị" disabled={!visible.length || loading || sending} checked={visible.length > 0 && selectedRows.length === visible.length} onChange={e => setSelected(e.target.checked ? visible.map(row => row.enrollmentId) : [])} /></th>
       <th>Sinh viên</th><th>Lớp / Môn học</th><th>Nghỉ không phép</th><th>Tổng buổi nghỉ</th><th>Điểm đã duyệt</th><th>Vi phạm</th><th>Thao tác</th>
     </tr></thead><tbody>{loading ? <tr><td colSpan={8}>Đang kiểm tra dữ liệu vi phạm...</td></tr> : !visible.length ? <tr><td colSpan={8}>{!semesterId ? "Chọn học kỳ để xem sinh viên vi phạm." : error ? "Không tải được dữ liệu. Vui lòng thử lại." : "Không có sinh viên vi phạm phù hợp với bộ lọc."}</td></tr> : visible.map(row => <tr key={row.enrollmentId}>
@@ -113,7 +115,7 @@ export function WarningPage({ token, metadata, onToast }: { token: string; metad
       <td>{row.score === null ? "Chưa duyệt" : `${row.score}/100`}</td>
       <td><div className="warning-reasons">{row.reasons.map(code => <span key={code}>{reasons[code]}</span>)}</div></td>
       <td><div className="row-actions"><button disabled={sending} onClick={() => { setError(""); setDraft({ all: false, rows: [row], reason }); }}>Gửi cảnh báo</button></div></td>
-    </tr>)}</tbody></table></div>
+    </tr>)}</tbody></PaginatedTable></div>
     <p className="warning-policy">Mỗi dòng là một môn của sinh viên. Khi gửi nhiều môn cùng lúc, hệ thống gộp thành một thông báo cho mỗi sinh viên. “Gửi tất cả” áp dụng cho học kỳ, lớp và lý do đang lọc.</p>
     {draft && <FeatureDialog title="Gửi cảnh báo học vụ" description={`Mẫu có sẵn · ${studentCount(draft.rows)} sinh viên · Thông báo trong ứng dụng`} onClose={() => { if (!sending) setDraft(null); }}>
       <div className="warning-compose">
@@ -122,7 +124,7 @@ export function WarningPage({ token, metadata, onToast }: { token: string; metad
           setDraft({ ...draft, reason: nextReason }); setError("");
         }}>{Object.entries(reasons).filter(([code]) => code === "all" || draft.rows.every(row => row.reasons.includes(code as Reason))).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</select></label>
         <p>Thông tin sinh viên, lớp, môn và số liệu vi phạm được tự điền cho từng người nhận.</p>
-        <details><summary>Danh sách người nhận ({studentCount(draft.rows)})</summary><ul>{Array.from(new Map(draft.rows.map(row => [row.studentId, row])).values()).map(row => <li key={row.studentId}>{row.studentName} · {row.studentCode}</li>)}</ul></details>
+        <details><summary>Danh sách người nhận ({studentCount(draft.rows)})</summary><ul><PaginatedItems paginationTag="li">{Array.from(new Map(draft.rows.map(row => [row.studentId, row])).values()).map(row => <li key={row.studentId}>{row.studentName} · {row.studentCode}</li>)}</PaginatedItems></ul></details>
         <h3>Cảnh báo học vụ · {example?.semesterName}</h3><pre className="warning-preview">{preview}</pre>
         {error && <div className="feature-error" role="alert">{error}</div>}
         <div className="warning-toolbar"><span>Gửi lại sẽ tạo thêm một thông báo mới.</span><button className="primary-button" disabled={sending} onClick={send}>{sending ? "Đang gửi..." : `Gửi cảnh báo cho ${studentCount(draft.rows)} sinh viên`}</button></div>

@@ -1,4 +1,6 @@
 "use client";
+import { PaginatedItems } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 
 import { useCallback, useEffect, useState } from "react";
@@ -159,9 +161,9 @@ export function WebsiteAdminPage({ token, onToast }: { token: string; onToast: T
         </div>
         <div className="form-actions"><button className="primary-button" disabled={busy}><Icon name={editingId ? "check" : "plus"} size={15} />{busy ? "Đang lưu..." : editingId ? "Cập nhật bài viết" : "Tạo bài viết"}</button></div>
       </form>
-      <div className="admin-post-grid">{visiblePosts.length === 0 ? <div className="feature-table-wrap public-loading">Chưa có bài viết trong chuyên mục này.</div> : visiblePosts.map((post) => <article className="admin-post-card" key={post.id}>
+      <div className="admin-post-grid">{visiblePosts.length === 0 ? <div className="feature-table-wrap public-loading">Chưa có bài viết trong chuyên mục này.</div> : (<PaginatedItems>{visiblePosts.map((post) => <article className="admin-post-card" key={post.id}>
         <img src={post.coverImageUrl || "/pp-academy-campus.webp"} alt="" /><div><div className="admin-post-status"><span className={post.isPublished ? "published" : "draft"}>{post.isPublished ? "Đã xuất bản" : "Bản nháp"}</span>{post.isFeatured && <span className="featured">Nổi bật</span>}</div><h3>{post.title}</h3><p>{post.excerpt}</p><small>{post.authorName}</small><div className="row-actions"><button disabled={busy} onClick={() => editPost(post)}>Sửa</button><button disabled={busy} className="danger" onClick={() => removePost(post)}>Xóa</button></div></div>
-      </article>)}</div>
+      </article>)}</PaginatedItems>)}</div>
     </>}
   </section>;
 }

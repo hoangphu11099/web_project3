@@ -1,4 +1,5 @@
 "use client";
+import { DEFAULT_EXAM_NOTE } from "@/models/exam-note";
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -14,7 +15,7 @@ import { FeatureDialog } from "@/components/common/FeatureDialog";
 import { StudentEditorDialog } from "./StudentEditorDialog";
 import { ClassStudentPicker } from "./ClassStudentPicker";
 import { ClassStudyDetails } from "./ClassStudyDetails";
-import { TeachingOfferForm } from "./TeachingOfferPlan";
+import { TeachingOfferDialog } from "./TeachingOfferPlan";
 import { LearningDetail } from "./LearningDetail";
 import { Icon } from "@/components/ui/Icon";
 
@@ -39,22 +40,6 @@ export function EntityPage({ active, token, metadata: initialMetadata, onToast }
   const [customExamType, setCustomExamType] = useState(false);
   const [metadata,setMetadata] = useState(initialMetadata);
   useEffect(() => { setMetadata(initialMetadata); }, [initialMetadata]);
-  const [majorOpen,setMajorOpen] = useState(false);
-  const [majorCode,setMajorCode] = useState("");
-  const [majorName,setMajorName] = useState("");
-  const [majorBusy,setMajorBusy] = useState(false);
-  const [majorError,setMajorError] = useErrorFeedback();
-  const createMajor = async (event: React.FormEvent) => {
-    event.preventDefault(); if (majorBusy) return;
-    setMajorBusy(true); setMajorError("");
-    try {
-      const result = await apiRequest(token,"/majors",{method:"POST",body:JSON.stringify({code:majorCode,name:majorName})});
-      setMetadata(current => ({...current,majors:[...current.majors,result.data]}));
-      if (formOpen) setForm(current => ({...current,majorId:String(idOf(result.data))}));
-      setMajorOpen(false); setMajorCode(""); setMajorName(""); onToast(result.message || "Đã tạo chuyên ngành","success");
-    } catch (error) { const message = error instanceof Error ? error.message : "Không tạo được chuyên ngành"; setMajorError(message); onToast(message,"error"); }
-    finally { setMajorBusy(false); }
-  };
   const [studentEditor,setStudentEditor] = useState<{row:Row|null}|null>(null);
   useEffect(()=>{setStudentEditor(null);},[active]);
   const [classDetail, setClassDetail] = useState<Row | null>(null);
@@ -65,6 +50,7 @@ export function EntityPage({ active, token, metadata: initialMetadata, onToast }
   useEffect(() => { const timer = window.setInterval(() => setStatusNow(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
   const config = entityConfigs[active]; const [rows, setRows] = useState<Row[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useErrorFeedback();
   const [query, setQuery] = useState(""); const [formOpen, setFormOpen] = useState(false); const [form, setForm] = useState<Record<string, string>>({}); const [saving, setSaving] = useState(false); const [editing, setEditing] = useState<Row | null>(null);
+  const [page, setPage] = useState(1);
   const [roomFilter, setRoomFilter] = useState("");
   const [buildingFilter, setBuildingFilter] = useState("");
   const [capacityFilter, setCapacityFilter] = useState("");
@@ -137,6 +123,11 @@ export function EntityPage({ active, token, metadata: initialMetadata, onToast }
       && (!majorFilter || info.majorKey === majorFilter)
       && (!classFilter || info.classCode === classFilter);
   });
+  const paginated = true;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 20));
+  const currentPage = Math.min(page, pageCount);
+  const visibleRows = paginated ? filtered.slice((currentPage - 1) * 20, currentPage * 20) : filtered;
+  useEffect(() => { setPage(1); }, [active, query, cohortFilter, majorFilter, classFilter, creditFilter, buildingFilter, capacityFilter, activityFilter, roomFilter]);
 
   const startEdit = (row: Row) => {
     if (isStudentPage) { setStudentEditor({row}); return; }
@@ -156,10 +147,11 @@ export function EntityPage({ active, token, metadata: initialMetadata, onToast }
     const body: Row = {};
     for (const [key, value] of Object.entries(form)) {
       if (["dayOfWeek", "session", "startTime", "endTime"].includes(key) && active === "Lớp học") continue;
-      body[key] = numericKeys.has(key) ? (value === "" ? 0 : Number(value)) : value;
+      body[key] = key === "isActive" ? value === "true" : numericKeys.has(key) ? (value === "" ? 0 : Number(value)) : value;
     }
     if (active === "Lớp học" && form.dayOfWeek && form.session) body.schedules = [{ dayOfWeek: form.dayOfWeek, session: form.session, startTime: form.startTime || "", endTime: form.endTime || "" }];
     if (active === "Lịch thi") { const session = form.session || "Sáng"; Object.assign(body, {session, ...teachingSessions[session], examType: form.examType || "Trực tiếp"}); }
+    if (active === "Chuyên ngành" && !editing) delete body.code;
     return body;
   };
 
@@ -199,15 +191,19 @@ export function EntityPage({ active, token, metadata: initialMetadata, onToast }
   const examTimes=teachingSessions[form.session||"Sáng"];
   const scopedRooms=metadata.rooms.map(room=>({...room,...(isExam&&form.examDate&&examTimes&&rows.some(exam=>idOf(exam)!==idOf(editing||{})&&Number(keyOf(exam,"RoomID"))===idOf(room)&&String(keyOf(exam,"ExamDate")).slice(0,10)===form.examDate&&String(keyOf(exam,"StartTime")).slice(0,5)<examTimes.endTime&&String(keyOf(exam,"EndTime")).slice(0,5)>examTimes.startTime)?{disabledReason:"Trùng lịch thi"}:{})}));
   const formMetadata = hasCourseField ? { ...metadata, courses: scopedCourses, rooms:scopedRooms } : metadata;
-  const changeFormField = (key: string, value: string) => setForm(current => changeDependentField(current, key, value));
+  const changeFormField = (key: string, value: string) => setForm(current => {
+    const next = changeDependentField(current, key, value);
+    if (active === "Chuyên ngành" && !editing && key === "name") {
+      next.code = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "D").toUpperCase().split(/[^A-Z]+/).filter(Boolean).map(word => word[0]).join("").slice(0, 12);
+    }
+    return next;
+  });
 
 
-  return <section className="feature-page"><div className="feature-heading"><div><p className="eyebrow">Quản lý đào tạo</p><h1>{config.title}</h1><p>{config.desc}</p></div><div className="form-actions">{config.canImport && <FileImport token={token} kind={active === "Sinh viên" ? "students" : "teachers"} onToast={onToast} onDone={load} />}{config.fields && <button className="primary-button" onClick={() => { if (isStudentPage) { setStudentEditor({row:null}); return; } setCustomExamType(false); setEditing(null); setForm(active === "Lịch thi" ? {session:"Sáng",examType:"Trực tiếp"} : {}); setFormOpen(!formOpen); }}><Icon name={formOpen ? "close" : "plus"} size={16} />{formOpen ? "Đóng form" : config.createLabel}</button>}</div></div>
-    {(isTeacherPage || isClassPage || isCoursePage) && <div className="feature-tools"><button type="button" className="refresh-button" disabled={saving} onClick={() => { setMajorOpen(true); setMajorError(""); }}><Icon name="plus" size={15}/>Thêm chuyên ngành</button><small>{isClassPage?"Tạo chuyên ngành mới để mở lớp. Ngành vừa tạo sẽ được chọn sẵn trong form.":isCoursePage?"Tạo chuyên ngành mới để bổ sung môn học tương ứng.":"Chọn ngành dạy khi thêm/sửa giảng viên để phân công đúng chuyên ngành."}</small></div>}
-    {majorOpen && <FeatureDialog title="Thêm chuyên ngành" onClose={() => { if (!majorBusy) setMajorOpen(false); }}><form className="feature-form" onSubmit={createMajor}><div className="form-grid"><label>Mã chuyên ngành<input required maxLength={50} value={majorCode} onChange={e => setMajorCode(e.target.value)} disabled={majorBusy} placeholder="VD: QTKD" /></label><label>Tên chuyên ngành<input required maxLength={150} value={majorName} onChange={e => setMajorName(e.target.value)} disabled={majorBusy} placeholder="VD: Quản trị kinh doanh" /></label></div><p>Chuyên ngành dùng chung cho giảng viên, lớp và môn học để phân công phù hợp.</p>{majorError && <div className="feature-error" role="alert">{majorError}</div>}<div className="form-actions"><button className="primary-button" disabled={majorBusy}>{majorBusy ? "Đang lưu..." : "Tạo chuyên ngành"}</button></div></form></FeatureDialog>}
+  return <section className="feature-page"><div className="feature-heading"><div><p className="eyebrow">Quản lý đào tạo</p><h1>{config.title}</h1><p>{config.desc}</p></div><div className="form-actions">{config.canImport && <FileImport token={token} kind={active === "Sinh viên" ? "students" : "teachers"} onToast={onToast} onDone={load} />}{config.fields && <button className="primary-button" onClick={() => { if (isStudentPage) { setStudentEditor({row:null}); return; } setCustomExamType(false); setEditing(null); setForm(active === "Lịch thi" ? {session:"Sáng",examType:"Trực tiếp",note:DEFAULT_EXAM_NOTE} : {}); setFormOpen(!formOpen); }}><Icon name={formOpen ? "close" : "plus"} size={16} />{formOpen ? "Đóng form" : config.createLabel}</button>}</div></div>
     {studentEditor && isStudentPage && <StudentEditorDialog key={studentEditor.row ? idOf(studentEditor.row) : "new-student"} token={token} student={studentEditor.row} metadata={metadata} onClose={()=>setStudentEditor(null)} onSaved={()=>{setStudentEditor(null);void load();}} onToast={onToast}/>}
-    {formOpen && !isStudentPage && config.fields && <FeatureDialog className="entity-editor-dialog" title={editing ? "Cập nhật thông tin" : config.createLabel || config.title} description="Kiểm tra thông tin trước khi lưu. Các trường có dấu * là bắt buộc." onClose={() => { if (!saving) { setFormOpen(false); setEditing(null); } }}><form className="feature-form entity-editor-form" onSubmit={submit}><fieldset disabled={saving}><div className="form-grid">{config.fields.filter(field => active !== "Lịch thi" || !["startTime", "endTime"].includes(field.key)).map((field) => <FormField key={field.key} field={active === "Lịch thi" && field.key === "examType" && customExamType ? {...field, options: undefined, placeholder: "Nhập hình thức thi khác"} : editing && field.key === "password" ? { ...field, placeholder: "Để trống để giữ mật khẩu hiện tại" } : field} value={form[field.key] || ""} metadata={formMetadata} disabled={field.optionKey === "courses" && (!form.classId || (isExam&&examOptionsLoading))} onChange={(value) => changeFormField(field.key, value)} />)}</div>{active === "Lịch thi" && <button type="button" className="refresh-button" onClick={() => { setCustomExamType(value => !value); setForm(current => ({...current, examType: ""})); }}>{customExamType ? "Chọn hình thức có sẵn" : "Tùy chọn · Thêm hình thức thi"}</button>}{hasCourseField && <p className="filter-summary">{!form.classId ? "Chọn lớp trước để xem môn học thuộc ngành của lớp." : formMetadata.courses.length === 0 ? "Lớp chưa có ngành hoặc ngành chưa có môn học. Vui lòng kiểm tra thông tin lớp và môn học." : "Chỉ hiện môn phù hợp với lớp và học kỳ đã chọn. Mục đã có hoặc trùng lịch được làm mờ và không thể chọn."}</p>}</fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={saving} onClick={() => {setFormOpen(false);setEditing(null);}}>Hủy bỏ</button><button className="primary-button" disabled={saving}>{saving ? "Đang lưu..." : editing ? "Cập nhật" : "Lưu dữ liệu"}</button></div></form></FeatureDialog>}
-    {classAction?.kind === "offer" && <TeachingOfferForm key={idOf(classAction.row)} token={token} metadata={metadata} onToast={onToast} initialClass={classAction.row} onSent={() => { setClassAction(null); load(); }} onCancel={() => setClassAction(null)} />}
+    {formOpen && !isStudentPage && config.fields && <FeatureDialog className="entity-editor-dialog" title={editing ? "Cập nhật thông tin" : config.createLabel || config.title} description="Kiểm tra thông tin trước khi lưu. Các trường có dấu * là bắt buộc." onClose={() => { if (!saving) { setFormOpen(false); setEditing(null); } }}><form className="feature-form entity-editor-form" onSubmit={submit}><fieldset disabled={saving}><div className="form-grid">{config.fields.filter(field => active !== "Lịch thi" || !["startTime", "endTime"].includes(field.key)).map((field) => <FormField key={field.key} field={active === "Lịch thi" && field.key === "examType" && customExamType ? {...field, options: undefined, placeholder: "Nhập hình thức thi khác"} : editing && field.key === "password" ? { ...field, placeholder: "Để trống để giữ mật khẩu hiện tại" } : field} value={form[field.key] || ""} metadata={formMetadata} disabled={(active === "Chuyên ngành" && field.key === "code") || field.optionKey === "courses" && (!form.classId || (isExam&&examOptionsLoading))} onChange={(value) => changeFormField(field.key, value)} />)}</div>{active === "Lịch thi" && <button type="button" className="refresh-button" onClick={() => { setCustomExamType(value => !value); setForm(current => ({...current, examType: ""})); }}>{customExamType ? "Chọn hình thức có sẵn" : "Tùy chọn · Thêm hình thức thi"}</button>}{hasCourseField && <p className="filter-summary">{!form.classId ? "Chọn lớp trước để xem môn học thuộc ngành của lớp." : formMetadata.courses.length === 0 ? "Lớp chưa có ngành hoặc ngành chưa có môn học. Vui lòng kiểm tra thông tin lớp và môn học." : "Chỉ hiện môn phù hợp với lớp và học kỳ đã chọn. Mục đã có hoặc trùng lịch được làm mờ và không thể chọn."}</p>}</fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={saving} onClick={() => {setFormOpen(false);setEditing(null);}}>Hủy bỏ</button><button className="primary-button" disabled={saving}>{saving ? "Đang lưu..." : editing ? "Cập nhật" : "Lưu dữ liệu"}</button></div></form></FeatureDialog>}
+    {classAction?.kind === "offer" && <TeachingOfferDialog key={idOf(classAction.row)} token={token} metadata={metadata} onToast={onToast} initialClass={classAction.row} onSent={() => { setClassAction(null); load(); }} onClose={() => setClassAction(null)} />}
     {classAction?.kind === "students" && <ClassStudentPicker key={idOf(classAction.row)} token={token} classRow={classAction.row} onClose={() => setClassAction(null)} onAdded={() => { setClassAction(null); void load(); }} onToast={onToast} />}
     {classAction?.kind === "assign" && <form className="inline-action-card" onSubmit={submitClassAction}>
       <div className="action-card-heading"><strong>{classAction.kind === "assign" ? "Phân công phụ trách lớp" : "Xếp sinh viên vào lớp"}</strong><p>Lớp {display(keyOf(classAction.row, "ClassCode"))}</p></div>
@@ -236,9 +232,10 @@ export function EntityPage({ active, token, metadata: initialMetadata, onToast }
     </>}
     {(isCoursePage || isRoomPage) && <select aria-label="Lọc theo hoạt động" value={activityFilter} onChange={e => setActivityFilter(e.target.value)}><option value="">Tất cả trạng thái</option><option value="true">Hoạt động</option><option value="false">Ngừng hoạt động</option></select>}
     <button className="refresh-button" onClick={load}><Icon name="refresh" size={15} />Làm mới</button></div>
-    {(isCoursePage || isRoomPage || isTeacherPage) && <p className="filter-summary">Đang hiển thị <strong>{filtered.length}</strong> / {rows.length} {config.title.toLowerCase()}{(query || majorFilter || creditFilter || buildingFilter || capacityFilter || activityFilter) && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setMajorFilter(""); setCreditFilter(""); setBuildingFilter(""); setCapacityFilter(""); setActivityFilter(""); }}>Xóa bộ lọc</button></>}</p>}
-    {isClassPage && <p className="filter-summary">Đang hiển thị <strong>{filtered.length}</strong> / {rows.length} lớp học{(query || cohortFilter || majorFilter || roomFilter) && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setRoomFilter(""); }}>Xóa bộ lọc</button></>}</p>}
-    {isStudentPage && <p className="filter-summary">Đang hiển thị <strong>{filtered.length}</strong> / {rows.length} sinh viên{hasStudentFilter && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setClassFilter(""); }}>Xóa bộ lọc</button></>}</p>}
-    <div className="feature-table-wrap"><table><thead><tr>{config.columns.map(([label]) => <th key={label}>{label}</th>)}<th>Thao tác</th></tr></thead><tbody>{loading ? <tr><td colSpan={config.columns.length + 1}>Đang tải dữ liệu...</td></tr> : filtered.length === 0 ? <tr><td colSpan={config.columns.length + 1}>{rows.length === 0 ? "Chưa có dữ liệu." : "Không có kết quả phù hợp với bộ lọc hiện tại."}</td></tr> : filtered.map((row, index) => <tr key={idOf(row) || index}>{config.columns.map(([label, path], col) => <td key={label}>{col === 0 ? <strong>{path.toLowerCase().includes("status") ? statusLabel(active === "Lớp học" && path === "Status" ? classStudyStatus(row, (keyOf(row,"CourseOfferings") || []) as Row[], statusNow) : pick(row, path)) : display(pick(row, path))}</strong> : path.toLowerCase().includes("status") ? statusLabel(active === "Lớp học" && path === "Status" ? classStudyStatus(row, (keyOf(row,"CourseOfferings") || []) as Row[], statusNow) : pick(row, path)) : display(pick(row, path))}</td>)}<td><div className="row-actions">{(isStudentPage || active === "Lớp của tôi") && <button onClick={() => { setLearningRow(row); }}>{isStudentPage ? "Chi tiết học tập" : "Sinh viên & chuyên cần"}</button>}{active === "Lớp học" && <><button onClick={() => setClassDetail(row)}>Chi tiết lớp</button><button onClick={() => openStudents(row)}>Thêm SV</button></>}{config.canEdit && <button onClick={() => startEdit(row)}>Sửa</button>}{config.canDelete && <button className="danger" onClick={() => remove(row)}>Xóa</button>}</div></td></tr>)}</tbody></table></div>
+    {(isCoursePage || isRoomPage || isTeacherPage) && <p className="filter-summary">Tìm thấy <strong>{filtered.length}</strong> / {rows.length} {config.title.toLowerCase()}{(query || majorFilter || creditFilter || buildingFilter || capacityFilter || activityFilter) && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setMajorFilter(""); setCreditFilter(""); setBuildingFilter(""); setCapacityFilter(""); setActivityFilter(""); }}>Xóa bộ lọc</button></>}</p>}
+    {isClassPage && <p className="filter-summary">Tìm thấy <strong>{filtered.length}</strong> / {rows.length} lớp học{(query || cohortFilter || majorFilter || roomFilter) && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setRoomFilter(""); }}>Xóa bộ lọc</button></>}</p>}
+    {isStudentPage && <p className="filter-summary">Tìm thấy <strong>{filtered.length}</strong> / {rows.length} sinh viên{hasStudentFilter && <> · <button type="button" className="text-link" onClick={() => { setQuery(""); setCohortFilter(""); setMajorFilter(""); setClassFilter(""); }}>Xóa bộ lọc</button></>}</p>}
+    <div className="feature-table-wrap"><table><thead><tr>{config.columns.map(([label]) => <th key={label}>{label}</th>)}<th>Thao tác</th></tr></thead><tbody>{loading ? <tr><td colSpan={config.columns.length + 1}>Đang tải dữ liệu...</td></tr> : filtered.length === 0 ? <tr><td colSpan={config.columns.length + 1}>{rows.length === 0 ? "Chưa có dữ liệu." : "Không có kết quả phù hợp với bộ lọc hiện tại."}</td></tr> : visibleRows.map((row, index) => <tr key={idOf(row) || index}>{config.columns.map(([label, path], col) => <td key={label}>{col === 0 ? <strong>{path.toLowerCase().includes("status") ? statusLabel(active === "Lớp học" && path === "Status" ? classStudyStatus(row, (keyOf(row,"CourseOfferings") || []) as Row[], statusNow) : pick(row, path)) : display(pick(row, path))}</strong> : path.toLowerCase().includes("status") ? statusLabel(active === "Lớp học" && path === "Status" ? classStudyStatus(row, (keyOf(row,"CourseOfferings") || []) as Row[], statusNow) : pick(row, path)) : active === "Chuyên ngành" && path === "IsActive" ? (keyOf(row,"IsActive") ? "Đang đào tạo" : "Ngừng đào tạo") : display(pick(row, path))}</td>)}<td><div className="row-actions">{(isStudentPage || active === "Lớp của tôi") && <button onClick={() => { setLearningRow(row); }}>{isStudentPage ? "Chi tiết học tập" : "Sinh viên & chuyên cần"}</button>}{active === "Lớp học" && <><button onClick={() => setClassDetail(row)}>Chi tiết lớp</button><button onClick={() => openStudents(row)}>Thêm SV</button></>}{config.canEdit && <button onClick={() => startEdit(row)}>Sửa</button>}{config.canDelete && <button className="danger" onClick={() => remove(row)}>Xóa</button>}</div></td></tr>)}</tbody></table></div>
+    {paginated && !loading && <nav className="entity-pagination" aria-label="Phân trang danh sách"><span>{filtered.length ? `${(currentPage - 1) * 20 + 1}–${Math.min(currentPage * 20, filtered.length)}` : "0"} / {filtered.length} {config.title.toLowerCase()}</span><button type="button" className="refresh-button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Trang trước</button><span>Trang {currentPage} / {pageCount}</span><button type="button" className="refresh-button" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)}>Trang sau</button></nav>}
   </section>;
 }

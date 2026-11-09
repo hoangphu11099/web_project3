@@ -70,6 +70,11 @@ export const numericKeys = new Set([
 ]);
 
 export const entityConfigs: Record<string, EntityConfig> = {
+ "Chuyên ngành": {
+  endpoint: "/majors", title: "Chuyên ngành", desc: "Danh mục đào tạo dùng chung cho sinh viên, giảng viên, lớp học và môn học. Ngành ngừng đào tạo không được chọn cho hồ sơ mới.", createLabel: "Thêm chuyên ngành", canEdit: true,
+  columns: [["Mã ngành", "Code"], ["Tên chuyên ngành", "Name"], ["Đang đào tạo", "IsActive"]],
+  fields: [{key:"name",label:"Tên chuyên ngành",required:true},{key:"code",label:"Mã viết tắt · Tự động tạo",placeholder:"Tự tạo từ tên ngành; thêm chữ ngẫu nhiên nếu trùng"},{key:"isActive",label:"Trạng thái đào tạo",options:[{value:"true",label:"Đang đào tạo"},{value:"false",label:"Ngừng đào tạo"}]}]
+ },
  "Phòng học": {
   endpoint: "/rooms", title: "Phòng học", desc: "Quản lý thông tin phòng học phục vụ giảng dạy và tổ chức thi.", createLabel: "Thêm phòng học", canEdit: true,
   columns: [["Tên phòng", "Name"], ["Tòa nhà", "Building"], ["Sức chứa", "Capacity"], ["Mô tả", "Description"], ["Hoạt động", "IsActive"]],
@@ -242,7 +247,7 @@ export const entityConfigs: Record<string, EntityConfig> = {
       { key: "startTime", label: "Giờ bắt đầu", type: "time", required: true },
       { key: "endTime", label: "Giờ kết thúc", type: "time", required: true },
       { key: "examType", label: "Hình thức thi", required:true, options:[{value:"Trực tiếp",label:"Trực tiếp"},{value:"Online",label:"Online"}] },
-      { key: "note", label: "Ghi chú" },
+      { key: "note", label: "Ghi chú dành cho sinh viên", textarea: true, placeholder: "Nhập hướng dẫn hoặc lưu ý cho buổi thi…" },
     ],
   },
   "Lớp của tôi": {

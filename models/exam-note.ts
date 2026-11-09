@@ -1,0 +1,1 @@
+export const DEFAULT_EXAM_NOTE = "Sinh viên vui lòng:\n- Có mặt đúng giờ theo lịch thi đã thông báo.\n- Chuẩn bị thẻ sinh viên hoặc giấy tờ tùy thân và các vật dụng được phép sử dụng.\n- Tuân thủ quy chế thi và hướng dẫn của cán bộ coi thi.";

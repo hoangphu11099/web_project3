@@ -1,8 +1,12 @@
 "use client";
+import { PaginatedItems } from "@/components/common/Pagination";
+
+import { PaginatedTable } from "@/components/common/Pagination";
+
 import { useErrorFeedback } from "@/components/common/ErrorFeedback";
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   apiRequest,
   display,
@@ -13,7 +17,7 @@ import {
 } from "@/controllers/api.controller";
 import type { MetadataData, Row, ToastHandler } from "@/models/dashboard";
 
-import { TeachingOfferForm, TeachingOfferDetails } from "./TeachingOfferPlan";
+import { TeachingOfferDialog, TeachingOfferDetails } from "./TeachingOfferPlan";
 import { FeatureDialog } from "@/components/common/FeatureDialog";
 import { Icon } from "@/components/ui/Icon";
 
@@ -118,9 +122,17 @@ export function NotificationPage({ token, onToast }: { token: string; onToast: T
       </fieldset><div className="form-actions"><button type="button" className="refresh-button" disabled={busy} onClick={()=>setComposeOpen(false)}>Hủy bỏ</button><label className="check-line"><input type="checkbox" checked={sendNow} onChange={(e) => setSendNow(e.target.checked)} /> Gửi thêm qua email (cần cấu hình SMTP)</label><button className="primary-button" disabled={busy}><Icon name="mail" size={15} />{busy ? "Đang gửi..." : `Gửi cho ${targetCount} người`}</button></div>
     </form></FeatureDialog>}
     {error && <div className="feature-error">! {error}</div>}
-    <div className="feature-table-wrap"><table><thead><tr><th>Tiêu đề</th><th>Người nhận</th><th>Phạm vi</th><th>Kênh</th><th>Trạng thái</th><th>Thời gian</th><th>Chi tiết</th></tr></thead><tbody>{rows.length === 0 ? <tr><td colSpan={7}>Chưa có thông báo.</td></tr> : rows.map((row) => <tr key={idOf(row)}><td><strong>{display(keyOf(row, "Subject"))}</strong></td><td>{display(pick(row, "RecipientUser.FullName")) !== "—" ? display(pick(row, "RecipientUser.FullName")) : display(keyOf(row, "RecipientEmail"))}</td><td>{notificationTargetLabel(String(keyOf(row, "TargetType")))}</td><td>{display(keyOf(row, "Channel"))}</td><td>{statusLabel(keyOf(row, "Status"))}</td><td>{display(keyOf(row, "CreatedAt"))}</td><td><div className="row-actions"><button type="button" onClick={() => setSelectedNotice(row)}>Xem</button></div></td></tr>)}</tbody></table></div>
+    <div className="feature-table-wrap"><PaginatedTable><thead><tr><th>Tiêu đề</th><th>Lớp đã gửi</th><th>Phạm vi</th><th>Kênh</th><th>Trạng thái</th><th>Thời gian</th><th>Chi tiết</th></tr></thead><tbody>{rows.length === 0 ? <tr><td colSpan={7}>Chưa có thông báo.</td></tr> : rows.map((row) => <tr key={idOf(row)}><td><strong>{display(keyOf(row, "Subject"))}</strong></td><td>{notificationClasses(row)}</td><td>{notificationTargetLabel(String(keyOf(row, "TargetType")))}</td><td>{display(keyOf(row, "Channel"))}</td><td>{statusLabel(keyOf(row, "Status"))}</td><td>{display(keyOf(row, "CreatedAt"))}</td><td><div className="row-actions"><button type="button" onClick={() => setSelectedNotice(row)}>Xem</button></div></td></tr>)}</tbody></PaginatedTable></div>
     {selectedNotice && <div className="feature-form compact-form"><div className="feature-heading"><div><p className="eyebrow">Nội dung thông báo</p><h2>{display(keyOf(selectedNotice, "Subject"))}</h2><p style={{ whiteSpace: "pre-wrap" }}>{display(keyOf(selectedNotice, "Content"))}</p></div><button type="button" className="refresh-button" onClick={() => setSelectedNotice(null)}>Đóng</button></div></div>}
   </section>;
+}
+
+function notificationClasses(row: Row) {
+  // Older exam notices already contain the exact class in their message.
+  const examClass = String(keyOf(row, "Subject") || "").startsWith("Lịch thi · ")
+    ? String(keyOf(row, "Content") || "").match(/^Lớp\s+(.+?)\s+·/)?.[1]
+    : undefined;
+  return examClass || String(keyOf(row, "RecipientClasses") || keyOf(row, "RecipientClassCode") || "").trim() || "Không theo lớp";
 }
 
 function notificationTargetLabel(value: string) {
@@ -129,74 +141,79 @@ function notificationTargetLabel(value: string) {
 }
 
 export function ClassOfferAdminPage({ token, metadata, onToast }: { token: string; metadata: MetadataData; onToast: ToastHandler }) {
+  const [offerOpen, setOfferOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const requestVersion = useRef(0);
   const [error, setError] = useErrorFeedback();
   const load = async () => {
-    try { const p = await apiRequest(token, "/class-offers"); setRows(p.data || []); setError(""); }
-    catch (e) { setError(e instanceof Error ? e.message : "Unable to load offers"); }
+    const version = ++requestVersion.current;
+    try {
+      const p = await apiRequest(token, "/class-offers", { cache: "no-store" });
+      if (version !== requestVersion.current) return;
+      setRows(Array.isArray(p.data) ? p.data : []); setError("");
+    }
+    catch (e) { if (version === requestVersion.current) setError(e instanceof Error ? e.message : "Không tải được lời mời giảng dạy"); }
   };
-  useEffect(() => { load(); }, [token]);
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") void load(); };
+    void load();
+    const timer = window.setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      requestVersion.current++;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [token]);
+  const sent = (offer: Row) => {
+    requestVersion.current++;
+    setRows(current => [offer, ...current.filter(row => idOf(row) !== idOf(offer))]);
+    setOfferOpen(false);
+    load();
+  };
   return <section className="feature-page">
     <div className="feature-heading"><div><h1>Phân công giảng dạy</h1><p>Phân công giảng viên và lập kế hoạch giảng dạy theo môn học, phòng học và thời gian.</p></div></div>
-    <TeachingOfferForm token={token} metadata={metadata} onToast={onToast} onSent={load} />
+    <button type="button" className="primary-button" onClick={() => setOfferOpen(true)}><Icon name="plus" size={16} />Phân công lịch học</button>
+    {offerOpen && <TeachingOfferDialog token={token} metadata={metadata} onToast={onToast} onClose={() => setOfferOpen(false)} onSent={sent} />}
     {error && <div className="feature-error" role="alert">{error}</div>}
     <OfferTable rows={rows} />
   </section>;
 }
 
+function offerDate(row: Row) {
+  const raw = keyOf(row, "CreatedAt") || keyOf(row, "OfferedAt");
+  const date = new Date(String(raw || ""));
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
 function OfferTable({ rows }: { rows: Row[] }) {
-  return (
-    <div className="feature-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Lớp</th>
-            <th>Giảng viên</th>
-            <th>Tiêu đề</th>
-            <th>Nội dung đề xuất</th>
-            <th>Trạng thái</th>
-            <th>Phản hồi</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={6}>Chưa có đề xuất phân công.</td>
-            </tr>
-          ) : (
-            rows.map((row) => {
-              const title =
-                keyOf(row, "Title") || "Đề xuất phân công giảng dạy";
-
-              const content = keyOf(row, "Content") || keyOf(row, "Message");
-
-              return (
-                <tr key={idOf(row)}>
-                  <td>
-                    <strong>{display(pick(row, "Class.ClassCode"))}</strong>
-                  </td>
-
-                  <td>{display(pick(row, "Teacher.User.FullName"))}</td>
-
-                  <td>
-                    <strong>{display(title)}</strong>
-                  </td>
-
-                  <td>
-                    <div className="offer-content">{display(content)}</div>
-                    <TeachingOfferDetails row={row} />
-                  </td>
-
-                  <td>{statusLabel(keyOf(row, "Status"))}</td>
-
-                  <td>{display(keyOf(row, "ResponseNote"))}</td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
+  const [selected, setSelected] = useState<Row | null>(null);
+  const sorted = [...rows].sort((a, b) =>
+    (offerDate(b)?.getTime() || 0) - (offerDate(a)?.getTime() || 0) || Number(idOf(b)) - Number(idOf(a)));
+  const selectedOffer = selected && (rows.find(row => idOf(row) === idOf(selected)) || selected);
+  const formatDate = (row: Row) => {
+    const date = offerDate(row);
+    return date ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" }).format(date) : "—";
+  };
+  return <>
+    <section className="offer-inbox" aria-label="Hộp thư lời mời giảng dạy">
+      <div className="offer-inbox-heading"><strong>Lời mời đã gửi <span>({rows.length})</span></strong><small>Mới nhất ở trên</small></div>
+      {sorted.length === 0 ? <p className="empty-note">Chưa có lời mời giảng dạy.</p> : (<PaginatedItems>{sorted.map(row => <button type="button" className={`offer-inbox-item ${keyOf(row, "Status") === "pending" ? "offer-inbox-pending" : ""}`} key={idOf(row)} onClick={() => setSelected(row)}>
+        <span className="avatar blue"><Icon name="mail" size={18} /></span>
+        <span className="offer-inbox-copy"><strong>{display(keyOf(row, "Title") || "Lời mời giảng dạy")}</strong><span>{display(pick(row, "Class.ClassCode"))} · {display(pick(row, "Teacher.User.FullName"))}</span></span>
+        <span className="offer-inbox-meta"><span>{statusLabel(keyOf(row, "Status"))}</span><time dateTime={offerDate(row)?.toISOString()}>{formatDate(row)}</time></span>
+        <Icon name="chevronRight" size={17} />
+      </button>)}</PaginatedItems>)}
+    </section>
+    {selectedOffer && <FeatureDialog className="entity-editor-dialog offer-message-dialog" title={display(keyOf(selectedOffer, "Title") || "Lời mời giảng dạy")} description={`${display(pick(selectedOffer, "Class.ClassCode"))} · ${display(pick(selectedOffer, "Teacher.User.FullName"))}`} onClose={() => setSelected(null)}>
+      <article className="offer-message-body">
+        <div className="offer-message-meta"><span>{statusLabel(keyOf(selectedOffer, "Status"))}</span><time>{formatDate(selectedOffer)}</time></div>
+        <p className="offer-message-content">{display(keyOf(selectedOffer, "Content") || keyOf(selectedOffer, "Message"))}</p>
+        <TeachingOfferDetails row={selectedOffer} />
+        {keyOf(selectedOffer, "ResponseNote") && <section className="offer-message-response"><strong>Phản hồi của giảng viên</strong><p>{display(keyOf(selectedOffer, "ResponseNote"))}</p></section>}
+      </article>
+    </FeatureDialog>}
+  </>;
 }
